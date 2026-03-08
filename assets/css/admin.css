@@ -1,0 +1,11 @@
+.wrap h1 {
+    margin-bottom: 8px;
+}
+.wrap .description {
+    color: #666;
+    margin-bottom: 20px;
+}
+.wrap table.widefat th,
+.wrap table.widefat td {
+    padding: 8px 12px;
+}

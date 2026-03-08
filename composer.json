@@ -1,0 +1,17 @@
+{
+    "name": "franpass87/fp-marketing-tracking-layer",
+    "description": "Centralized marketing tracking layer for WordPress. Routes events to GTM dataLayer and dispatches server-side events to GA4 and Meta.",
+    "type": "wordpress-plugin",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "FPTracking\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
