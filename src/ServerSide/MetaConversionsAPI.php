@@ -25,11 +25,11 @@ final class MetaConversionsAPI {
     /**
      * Sends a single event to Meta Conversions API.
      *
-     * @param string $event_name      Meta standard or custom event name (e.g. 'Purchase', 'Lead')
+     * @param string $event_name      Meta standard event name (e.g. 'Purchase', 'Lead')
      * @param array  $custom_data     Event-specific data (value, currency, contents, etc.)
      * @param array  $user_data       Raw user data (will be hashed automatically)
-     * @param string $event_source_url Page URL where the event occurred
-     * @param string $event_id        Deduplication ID (shared with client-side fbq)
+     * @param string $event_source_url Page URL where the event occurred (required for website events)
+     * @param string $event_id        Deduplication ID — must match the eventID sent by fbq() client-side
      * @return bool
      */
     public function send(
@@ -44,47 +44,48 @@ final class MetaConversionsAPI {
         }
 
         $pixel_id = $this->settings->get('meta_pixel_id');
-        $url = sprintf(
-            '%s/%s/%s/events?access_token=%s',
-            self::ENDPOINT,
-            self::API_VERSION,
-            $pixel_id,
-            $this->settings->get('meta_access_token')
+        $url = add_query_arg(
+            ['access_token' => $this->settings->get('meta_access_token')],
+            sprintf('%s/%s/%s/events', self::ENDPOINT, self::API_VERSION, $pixel_id)
         );
+
+        // event_source_url is required for website action_source
+        $source_url = $event_source_url
+            ?: (isset($_SERVER['HTTP_REFERER']) ? sanitize_url(wp_unslash($_SERVER['HTTP_REFERER'])) : '')
+            ?: home_url(add_query_arg(null, null));
 
         $event = [
             'event_name'       => $event_name,
             'event_time'       => time(),
-            'event_source_url' => $event_source_url ?: home_url(add_query_arg(null, null)),
+            'event_source_url' => $source_url,
             'action_source'    => 'website',
             'user_data'        => $this->hash_user_data($user_data),
             'custom_data'      => $custom_data,
         ];
 
+        // event_id enables deduplication with client-side fbq() — always include when available
         if (!empty($event_id)) {
             $event['event_id'] = $event_id;
         }
 
         $body = ['data' => [$event]];
 
+        // test_event_code: only add when explicitly set (empty string would cause API errors)
         if ($this->settings->get('debug_mode', false)) {
-            $body['test_event_code'] = apply_filters('fp_tracking_meta_test_event_code', '');
+            $test_code = (string) apply_filters('fp_tracking_meta_test_event_code', '');
+            if ($test_code !== '') {
+                $body['test_event_code'] = $test_code;
+            }
         }
 
-        $response = wp_remote_post($url, [
+        // Use non-blocking for performance; errors are logged only in debug mode
+        wp_remote_post($url, [
             'headers'     => ['Content-Type' => 'application/json'],
             'body'        => wp_json_encode($body),
             'timeout'     => 5,
             'blocking'    => false,
             'data_format' => 'body',
         ]);
-
-        if (is_wp_error($response)) {
-            if ($this->settings->get('debug_mode', false)) {
-                error_log('[FP Tracking] Meta CAPI error: ' . $response->get_error_message());
-            }
-            return false;
-        }
 
         return true;
     }

@@ -20,22 +20,31 @@ final class ServerSideDispatcher {
 
     /**
      * Maps FP event names to their Meta standard event equivalent.
+     * Must stay in sync with GTMExporter::META_EVENT_MAP.
      * Events not listed here are sent to GA4 only (no Meta CAPI).
+     *
+     * Note: click_phone, click_whatsapp, sign_up are client-side only —
+     * no server-side user_data available, so excluded from CAPI.
      */
     private const META_EVENT_MAP = [
-        // Revenue
-        'purchase'                  => 'Purchase',
-        'booking_confirmed'         => 'Purchase',
-        'booking_payment_completed' => 'Purchase',
-        'event_ticket_purchase'     => 'Purchase',
-        'experience_paid'           => 'Purchase',
-        'rtb_approved'              => 'Purchase',
-        'gift_purchased'            => 'Purchase',
+        // Revenue / Purchase
+        'purchase'                    => 'Purchase',
+        'event_ticket_purchase'       => 'Purchase',
+        'booking_confirmed'           => 'Purchase',
+        'booking_payment_completed'   => 'Purchase',
+        'experience_paid'             => 'Purchase',
+        'rtb_approved'                => 'Purchase',
+        'gift_purchased'              => 'Purchase',
         // Checkout / Funnel
-        'form_payment_started'      => 'InitiateCheckout',
-        'rtb_submitted'             => 'Lead',
+        'begin_checkout'              => 'InitiateCheckout',
+        'booking_submitted'           => 'InitiateCheckout',
+        'experience_checkout_started' => 'InitiateCheckout',
+        'form_payment_started'        => 'InitiateCheckout',
+        // Cart
+        'add_to_cart'                 => 'AddToCart',
         // Lead
-        'generate_lead'             => 'Lead',
+        'generate_lead'               => 'Lead',
+        'rtb_submitted'               => 'Lead',
     ];
 
     /**
@@ -46,7 +55,9 @@ final class ServerSideDispatcher {
      * @param array  $params      Event parameters (same as passed to fp_tracking_event)
      */
     public function dispatch(string $event_name, array $params): void {
-        $event_id  = $params['event_id'] ?? uniqid('ss_', true);
+        // event_id is always set by DataLayerManager before this action fires,
+        // ensuring the same ID is used in both the dataLayer push and the CAPI call.
+        $event_id  = (string) ($params['event_id'] ?? uniqid('fp_', true));
         $client_id = GA4MeasurementProtocol::extract_client_id();
         $user_data = $params['user_data'] ?? [];
 
@@ -57,8 +68,9 @@ final class ServerSideDispatcher {
         // ── Meta Conversions API ─────────────────────────────────────────────
         $meta_event = self::META_EVENT_MAP[$event_name] ?? null;
         if ($meta_event !== null) {
-            $meta_custom = $this->build_meta_custom($event_name, $params);
-            $this->meta->send($meta_event, $meta_custom, $user_data, '', $event_id);
+            $meta_custom    = $this->build_meta_custom($event_name, $params);
+            $source_url     = (string) ($params['page_url'] ?? $params['event_source_url'] ?? '');
+            $this->meta->send($meta_event, $meta_custom, $user_data, $source_url, $event_id);
         }
     }
 
@@ -87,7 +99,7 @@ final class ServerSideDispatcher {
     private function build_meta_custom(string $event_name, array $params): array {
         $custom = [
             'value'    => (float) ($params['value'] ?? 0),
-            'currency' => (string) ($params['currency'] ?? 'EUR'),
+            'currency' => strtoupper((string) ($params['currency'] ?? 'EUR')),
         ];
 
         // Revenue events: include contents for Meta product catalog matching
@@ -112,6 +124,29 @@ final class ServerSideDispatcher {
                 $custom['contents']     = [['id' => 'resv-' . $params['reservation_id'], 'quantity' => 1]];
                 $custom['content_type'] = 'product';
             }
+        }
+
+        // Checkout / funnel events
+        $checkout_events = ['begin_checkout', 'booking_submitted', 'experience_checkout_started'];
+        if (in_array($event_name, $checkout_events, true) && !empty($params['items'])) {
+            $custom['contents'] = array_map(static function (array $item): array {
+                return [
+                    'id'       => (string) ($item['item_id'] ?? ''),
+                    'quantity' => (int) ($item['quantity'] ?? 1),
+                ];
+            }, $params['items']);
+            $custom['content_type'] = 'product';
+        }
+
+        // Cart event
+        if ($event_name === 'add_to_cart' && !empty($params['items'])) {
+            $custom['contents'] = array_map(static function (array $item): array {
+                return [
+                    'id'       => (string) ($item['item_id'] ?? ''),
+                    'quantity' => (int) ($item['quantity'] ?? 1),
+                ];
+            }, $params['items']);
+            $custom['content_type'] = 'product';
         }
 
         // Lead events: include content name for segmentation

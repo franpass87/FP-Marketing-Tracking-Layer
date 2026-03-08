@@ -40,12 +40,17 @@ final class GTMExporter {
         'file_download'          => ['label' => 'File Download',         'type' => 'ga4'],
         'search'                 => ['label' => 'Search',                 'type' => 'ga4'],
 
+        // ── WordPress / CF7 / GF / WPForms ──────────────────────────────────
+        'contact_form_submit'    => ['label' => 'Contact Form Submit',    'type' => 'ga4'],
+        'login'                  => ['label' => 'Login',                  'type' => 'ga4'],
+
         // ── FP-Forms ─────────────────────────────────────────────────────────
         'form_view'              => ['label' => 'Form View',              'type' => 'ga4'],
         'form_start'             => ['label' => 'Form Start',             'type' => 'ga4'],
         'form_step_complete'     => ['label' => 'Form Step Complete',     'type' => 'ga4'],
         'form_abandon'           => ['label' => 'Form Abandon',           'type' => 'ga4'],
         'form_submit_attempt'    => ['label' => 'Form Submit Attempt',    'type' => 'ga4'],
+        'fp_form_submit_success' => ['label' => 'FP Form Submit Success', 'type' => 'ga4'],
         'form_payment_started'   => ['label' => 'Form Payment Started',   'type' => 'ga4+meta+ads'],
 
         // ── FP-Restaurant-Reservations ───────────────────────────────────────
@@ -89,6 +94,12 @@ final class GTMExporter {
 
         // ── FP-Forms (funnel) ────────────────────────────────────────────────
         'form_submit_error'           => ['label' => 'Form Submit Error',           'type' => 'ga4'],
+
+        // ── FP-CTA-Bar ───────────────────────────────────────────────────────
+        'cta_bar_click'               => ['label' => 'CTA Bar Click',               'type' => 'ga4'],
+
+        // ── FP-Bio-Standalone ────────────────────────────────────────────────
+        'bio_link_click'              => ['label' => 'Bio Link Click',              'type' => 'ga4'],
     ];
 
     /** Meta event mapping: FP event → Meta standard event */
@@ -178,29 +189,62 @@ final class GTMExporter {
 
         // dataLayer variables for common event params
         $dl_params = [
+            // Core
             'event_id'          => 'FP - DL event_id',
             'transaction_id'    => 'FP - DL transaction_id',
             'value'             => 'FP - DL value',
             'currency'          => 'FP - DL currency',
             'items'             => 'FP - DL items',
+            // Forms
             'form_id'           => 'FP - DL form_id',
-            'form_name'         => 'FP - DL form_name',
-            'click_type'        => 'FP - DL click_type',
-            'click_url'         => 'FP - DL click_url',
-            'click_text'        => 'FP - DL click_text',
-            'scroll_depth'      => 'FP - DL scroll_depth',
+            'form_title'        => 'FP - DL form_title',
+            'form_type'         => 'FP - DL form_type',
+            'submission_id'     => 'FP - DL submission_id',
+            'step'              => 'FP - DL step',
+            'fields_filled'     => 'FP - DL fields_filled',
+            // Click events — actual param names from fp-tracking.js
+            'link_type'         => 'FP - DL link_type',
+            'link_url'          => 'FP - DL link_url',
+            'link_text'         => 'FP - DL link_text',
+            'link_domain'       => 'FP - DL link_domain',
+            'phone_number'      => 'FP - DL phone_number',
+            'email_address'     => 'FP - DL email_address',
+            'whatsapp_number'   => 'FP - DL whatsapp_number',
+            'social_network'    => 'FP - DL social_network',
+            'map_address'       => 'FP - DL map_address',
+            // Scroll
+            'percent_scrolled'  => 'FP - DL percent_scrolled',
+            // Video
+            'video_title'       => 'FP - DL video_title',
             'video_url'         => 'FP - DL video_url',
-            'video_percent'     => 'FP - DL video_percent',
+            'video_provider'    => 'FP - DL video_provider',
+            'video_duration'    => 'FP - DL video_duration',
+            // Search
             'search_term'       => 'FP - DL search_term',
+            // File download
+            'file_url'          => 'FP - DL file_url',
+            'file_name'         => 'FP - DL file_name',
+            'file_extension'    => 'FP - DL file_extension',
+            // Booking (Restaurant)
             'reservation_id'       => 'FP - DL reservation_id',
             'reservation_location' => 'FP - DL reservation_location',
             'reservation_party'    => 'FP - DL reservation_party',
             'reservation_date'     => 'FP - DL reservation_date',
             'meal_type'            => 'FP - DL meal_type',
+            // Experiences
             'experience_id'        => 'FP - DL experience_id',
             'experience_title'     => 'FP - DL experience_title',
-            'file_url'          => 'FP - DL file_url',
-            'file_name'         => 'FP - DL file_name',
+            // FP-CTA-Bar
+            'cta_label'         => 'FP - DL cta_label',
+            'cta_action'        => 'FP - DL cta_action',
+            'cta_url'           => 'FP - DL cta_url',
+            // FP-Bio-Standalone
+            'bio_link_label'    => 'FP - DL bio_link_label',
+            'bio_link_url'      => 'FP - DL bio_link_url',
+            'bio_link_category' => 'FP - DL bio_link_category',
+            // Error events
+            'error_message'     => 'FP - DL error_message',
+            'error_type'        => 'FP - DL error_type',
         ];
 
         foreach ($dl_params as $param => $label) {
@@ -307,7 +351,7 @@ final class GTMExporter {
                 [
                     'type'  => 'template',
                     'key'   => 'html',
-                    'value' => "<script>\nwindow.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('consent','default',{\n  'ad_storage':'denied',\n  'analytics_storage':'denied',\n  'ad_user_data':'denied',\n  'ad_personalization':'denied',\n  'wait_for_update': 500\n});\n</script>",
+                    'value' => "<script>\nwindow.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('consent','default',{\n  'analytics_storage':'denied',\n  'ad_storage':'denied',\n  'ad_user_data':'denied',\n  'ad_personalization':'denied',\n  'functionality_storage':'granted',\n  'security_storage':'granted',\n  'wait_for_update': 500\n});\n</script>",
                 ],
                 ['type' => 'boolean', 'key' => 'supportDocumentWrite', 'value' => 'false'],
             ],
@@ -449,14 +493,52 @@ final class GTMExporter {
             'event_id' => $variables['event_id']['name'],
         ];
 
-        // Event-specific params
+        // Event-specific params — param names MUST match exactly what fp-tracking.js / PHP bridges push
         $specific = match (true) {
+
+            // ── WooCommerce ecommerce ────────────────────────────────────────
             in_array($event_name, ['purchase', 'event_ticket_purchase'], true) => [
                 'transaction_id' => $variables['transaction_id']['name'],
                 'value'          => $variables['value']['name'],
                 'currency'       => $variables['currency']['name'],
                 'items'          => $variables['items']['name'],
             ],
+            in_array($event_name, ['add_to_cart', 'view_item', 'begin_checkout'], true) => [
+                'value'    => $variables['value']['name'],
+                'currency' => $variables['currency']['name'],
+                'items'    => $variables['items']['name'],
+            ],
+
+            // ── Lead / Forms ─────────────────────────────────────────────────
+            $event_name === 'generate_lead' => [
+                'form_id'    => $variables['form_id']['name'],
+                'form_title' => $variables['form_title']['name'],
+                'form_type'  => $variables['form_type']['name'],
+            ],
+            $event_name === 'form_payment_started' => [
+                'form_id'  => $variables['form_id']['name'],
+                'value'    => $variables['value']['name'],
+                'currency' => $variables['currency']['name'],
+            ],
+            in_array($event_name, ['contact_form_submit'], true) => [
+                'form_id'   => $variables['form_id']['name'],
+                'form_type' => $variables['form_type']['name'],
+            ],
+            in_array($event_name, ['form_view', 'form_start', 'form_abandon', 'form_submit_attempt', 'fp_form_submit_success'], true) => [
+                'form_id'    => $variables['form_id']['name'],
+                'form_title' => $variables['form_title']['name'],
+            ],
+            $event_name === 'form_step_complete' => [
+                'form_id' => $variables['form_id']['name'],
+                'step'    => $variables['step']['name'],
+            ],
+            $event_name === 'form_submit_error' => [
+                'form_id'       => $variables['form_id']['name'],
+                'error_message' => $variables['error_message']['name'],
+                'error_type'    => $variables['error_type']['name'],
+            ],
+
+            // ── Restaurant Reservations ──────────────────────────────────────
             in_array($event_name, ['booking_confirmed', 'booking_submitted', 'booking_payment_required', 'waitlist_joined'], true) => [
                 'transaction_id'       => $variables['transaction_id']['name'],
                 'value'                => $variables['value']['name'],
@@ -467,60 +549,122 @@ final class GTMExporter {
                 'reservation_date'     => $variables['reservation_date']['name'],
                 'meal_type'            => $variables['meal_type']['name'],
             ],
-            in_array($event_name, ['booking_payment_completed', 'booking_cancelled', 'booking_no_show', 'booking_visited', 'waitlist_promoted', 'booking_moved'], true) => [
+            $event_name === 'booking_payment_completed' => [
+                'transaction_id'       => $variables['transaction_id']['name'],
+                'value'                => $variables['value']['name'],
+                'currency'             => $variables['currency']['name'],
                 'reservation_id'       => $variables['reservation_id']['name'],
                 'reservation_location' => $variables['reservation_location']['name'],
                 'reservation_party'    => $variables['reservation_party']['name'],
                 'reservation_date'     => $variables['reservation_date']['name'],
                 'meal_type'            => $variables['meal_type']['name'],
             ],
-            in_array($event_name, ['booking_step_complete', 'booking_submit_error'], true) => [
+            in_array($event_name, ['booking_cancelled', 'booking_no_show', 'booking_visited', 'waitlist_promoted', 'booking_moved'], true) => [
+                'reservation_id'       => $variables['reservation_id']['name'],
+                'reservation_location' => $variables['reservation_location']['name'],
+                'reservation_party'    => $variables['reservation_party']['name'],
+                'reservation_date'     => $variables['reservation_date']['name'],
+                'meal_type'            => $variables['meal_type']['name'],
+            ],
+            in_array($event_name, ['booking_form_view', 'booking_form_start', 'booking_form_abandon', 'booking_step_complete', 'booking_submit_error'], true) => [
                 'reservation_id'       => $variables['reservation_id']['name'],
                 'reservation_location' => $variables['reservation_location']['name'],
             ],
+
+            // ── FP-Experiences (eventi con revenue) ──────────────────────────
+            in_array($event_name, [
+                'experience_paid', 'rtb_approved', 'gift_purchased', 'rtb_submitted',
+            ], true) => [
+                'transaction_id'   => $variables['transaction_id']['name'],
+                'experience_id'    => $variables['experience_id']['name'],
+                'experience_title' => $variables['experience_title']['name'],
+                'value'            => $variables['value']['name'],
+                'currency'         => $variables['currency']['name'],
+                'reservation_id'   => $variables['reservation_id']['name'],
+            ],
+
+            // ── FP-Experiences (eventi senza revenue) ────────────────────────
             in_array($event_name, [
                 'experience_view', 'experience_checkout_view', 'gift_redeem_view',
                 'booking_start', 'booking_abandon', 'rtb_start', 'gift_start',
-                'experience_checkout_started', 'experience_paid', 'experience_cancelled',
-                'rtb_submitted', 'rtb_approved', 'rtb_declined', 'rtb_hold_expired',
-                'gift_purchased', 'gift_redeemed',
+                'experience_checkout_started', 'experience_cancelled',
+                'rtb_declined', 'rtb_hold_expired', 'gift_redeemed',
             ], true) => [
                 'experience_id'    => $variables['experience_id']['name'],
                 'experience_title' => $variables['experience_title']['name'],
             ],
-            $event_name === 'generate_lead' => [
-                'form_id'   => $variables['form_id']['name'],
-                'form_name' => $variables['form_name']['name'],
+
+            // ── Click events — param names match fp-tracking.js output ───────
+            $event_name === 'click_phone' => [
+                'link_type'    => $variables['link_type']['name'],
+                'phone_number' => $variables['phone_number']['name'],
+                'link_text'    => $variables['link_text']['name'],
+                'link_url'     => $variables['link_url']['name'],
             ],
-            $event_name === 'form_payment_started' => [
-                'form_id'  => $variables['form_id']['name'],
-                'value'    => $variables['value']['name'],
-                'currency' => $variables['currency']['name'],
+            $event_name === 'click_whatsapp' => [
+                'link_type'       => $variables['link_type']['name'],
+                'whatsapp_number' => $variables['whatsapp_number']['name'],
+                'link_text'       => $variables['link_text']['name'],
+                'link_url'        => $variables['link_url']['name'],
             ],
-            in_array($event_name, ['add_to_cart', 'view_item', 'begin_checkout'], true) => [
-                'value'    => $variables['value']['name'],
-                'currency' => $variables['currency']['name'],
-                'items'    => $variables['items']['name'],
+            $event_name === 'click_email' => [
+                'link_type'     => $variables['link_type']['name'],
+                'email_address' => $variables['email_address']['name'],
+                'link_text'     => $variables['link_text']['name'],
+                'link_url'      => $variables['link_url']['name'],
             ],
-            in_array($event_name, ['click_phone', 'click_whatsapp', 'click_email', 'click_map', 'click_cta', 'click_social', 'click_external_link'], true) => [
-                'click_type' => $variables['click_type']['name'],
-                'click_url'  => $variables['click_url']['name'],
-                'click_text' => $variables['click_text']['name'],
+            $event_name === 'click_map' => [
+                'link_type'   => $variables['link_type']['name'],
+                'map_address' => $variables['map_address']['name'],
+                'link_url'    => $variables['link_url']['name'],
             ],
+            in_array($event_name, ['click_social'], true) => [
+                'link_type'      => $variables['link_type']['name'],
+                'social_network' => $variables['social_network']['name'],
+                'link_text'      => $variables['link_text']['name'],
+                'link_url'       => $variables['link_url']['name'],
+            ],
+            in_array($event_name, ['click_external_link', 'click_cta'], true) => [
+                'link_type'   => $variables['link_type']['name'],
+                'link_url'    => $variables['link_url']['name'],
+                'link_domain' => $variables['link_domain']['name'],
+                'link_text'   => $variables['link_text']['name'],
+            ],
+
+            // ── Engagement ───────────────────────────────────────────────────
             $event_name === 'scroll_depth' => [
-                'scroll_depth' => $variables['scroll_depth']['name'],
+                'percent_scrolled' => $variables['percent_scrolled']['name'],
             ],
             $event_name === 'video_complete' => [
-                'video_url'     => $variables['video_url']['name'],
-                'video_percent' => $variables['video_percent']['name'],
+                'video_title'    => $variables['video_title']['name'],
+                'video_url'      => $variables['video_url']['name'],
+                'video_provider' => $variables['video_provider']['name'],
+                'video_duration' => $variables['video_duration']['name'],
             ],
             $event_name === 'search' => [
                 'search_term' => $variables['search_term']['name'],
             ],
             $event_name === 'file_download' => [
-                'file_url'  => $variables['file_url']['name'],
-                'file_name' => $variables['file_name']['name'],
+                'file_name'      => $variables['file_name']['name'],
+                'file_extension' => $variables['file_extension']['name'],
+                'file_url'       => $variables['file_url']['name'],
+                'link_text'      => $variables['link_text']['name'],
             ],
+
+            // ── FP-CTA-Bar ───────────────────────────────────────────────────
+            $event_name === 'cta_bar_click' => [
+                'cta_label'  => $variables['cta_label']['name'],
+                'cta_action' => $variables['cta_action']['name'],
+                'cta_url'    => $variables['cta_url']['name'],
+            ],
+
+            // ── FP-Bio-Standalone ────────────────────────────────────────────
+            $event_name === 'bio_link_click' => [
+                'bio_link_label'    => $variables['bio_link_label']['name'],
+                'bio_link_url'      => $variables['bio_link_url']['name'],
+                'bio_link_category' => $variables['bio_link_category']['name'],
+            ],
+
             default => [],
         };
 

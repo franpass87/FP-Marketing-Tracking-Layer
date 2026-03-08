@@ -142,7 +142,7 @@ final class WooCommerceIntegration {
             if (!$item instanceof \WC_Order_Item_Product) {
                 continue;
             }
-            // Skip FP-Experiences items — GA4.php handles those via fp_exp_reservation_paid / fire_purchase_event
+            // Skip FP-Experiences items — WordPressIntegration bridge handles those via fp_exp_reservation_paid → experience_paid
             if ($item->get_type() === 'fp_experience_item') {
                 continue;
             }

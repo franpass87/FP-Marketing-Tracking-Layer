@@ -38,6 +38,15 @@ final class WordPressIntegration {
         // User login / register
         add_action('wp_login', [$this, 'track_login'], 10, 2);
         add_action('user_register', [$this, 'track_register']);
+
+        // FP-Experiences bridge (only if plugin is active)
+        if (defined('FP_EXP_VERSION') || class_exists('FP_Exp\Core\Plugin')) {
+            add_action('fp_exp_rtb_submitted',       [$this, 'track_exp_rtb_submitted'],  10, 3);
+            add_action('fp_exp_rtb_request_approved',[$this, 'track_exp_rtb_approved'],   10, 3);
+            add_action('fp_exp_gift_purchased',      [$this, 'track_exp_gift_purchased'], 10, 2);
+            add_action('fp_exp_reservation_paid',    [$this, 'track_exp_reservation_paid'], 10, 2);
+            add_action('fp_exp_shortcode_rendered',  [$this, 'track_exp_shortcode_rendered'], 10, 2);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -174,8 +183,103 @@ final class WordPressIntegration {
     }
 
     // -----------------------------------------------------------------------
-    // Helpers
+    // FP-Experiences bridge
     // -----------------------------------------------------------------------
+
+    /**
+     * fp_exp_rtb_submitted($experience_id, $reservation_id, $data)
+     * $data: ['value', 'currency', 'tickets', 'contact' => ['em','fn','ln','ph']]
+     */
+    public function track_exp_rtb_submitted(int $experience_id, int $reservation_id, array $data): void {
+        do_action('fp_tracking_event', 'rtb_submitted', [
+            'experience_id'  => $experience_id,
+            'reservation_id' => $reservation_id,
+            'transaction_id' => 'rtb-' . $reservation_id,
+            'value'          => (float) ($data['value'] ?? 0),
+            'currency'       => (string) ($data['currency'] ?? 'EUR'),
+            'event_id'       => 'rtb_' . $reservation_id . '_' . time(),
+            'user_data'      => array_filter((array) ($data['contact'] ?? [])),
+        ]);
+    }
+
+    /**
+     * fp_exp_rtb_request_approved($reservation_id, $context, $mode)
+     * $context: ['experience' => [...], 'reservation' => [...]]
+     */
+    public function track_exp_rtb_approved(int $reservation_id, array $context, string $mode): void {
+        $exp    = $context['experience'] ?? [];
+        $totals = $context['totals'] ?? [];
+        do_action('fp_tracking_event', 'rtb_approved', [
+            'experience_id'    => (int) ($exp['id'] ?? 0),
+            'experience_title' => (string) ($exp['title'] ?? ''),
+            'reservation_id'   => $reservation_id,
+            'transaction_id'   => 'rtb-' . $reservation_id,
+            'value'            => (float) ($totals['total'] ?? 0),
+            'currency'         => (string) ($totals['currency'] ?? 'EUR'),
+            'approval_mode'    => $mode,
+            'event_id'         => 'rtb_approved_' . $reservation_id . '_' . time(),
+        ]);
+    }
+
+    /**
+     * fp_exp_gift_purchased($voucher_id, $order_id)
+     */
+    public function track_exp_gift_purchased(int $voucher_id, int $order_id): void {
+        $order = function_exists('wc_get_order') ? wc_get_order($order_id) : null;
+        $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
+        $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
+
+        do_action('fp_tracking_event', 'gift_purchased', [
+            'voucher_id'     => $voucher_id,
+            'order_id'       => $order_id,
+            'transaction_id' => 'gift-' . $order_id,
+            'value'          => $value,
+            'currency'       => $currency,
+            'event_id'       => 'gift_' . $voucher_id . '_' . time(),
+        ]);
+    }
+
+    /**
+     * fp_exp_reservation_paid($reservation_id, $order_id)
+     * Fires when a WooCommerce experience order is paid.
+     */
+    public function track_exp_reservation_paid(int $reservation_id, int $order_id): void {
+        $order = function_exists('wc_get_order') ? wc_get_order($order_id) : null;
+        $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
+        $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
+
+        do_action('fp_tracking_event', 'experience_paid', [
+            'reservation_id' => $reservation_id,
+            'order_id'       => $order_id,
+            'transaction_id' => 'exp-' . $order_id,
+            'value'          => $value,
+            'currency'       => $currency,
+            'event_id'       => 'exp_paid_' . $reservation_id . '_' . time(),
+        ]);
+    }
+
+    /**
+     * fp_exp_shortcode_rendered($tag, $context)
+     * Fires when a shortcode is rendered — used to track checkout page views.
+     */
+    public function track_exp_shortcode_rendered(string $tag, array $context): void {
+        // Only track the checkout shortcode as experience_checkout_started
+        if ($tag !== 'fp_exp_checkout' && $tag !== 'fp_experience_checkout') {
+            return;
+        }
+
+        static $fired = false;
+        if ($fired) {
+            return;
+        }
+        $fired = true;
+
+        do_action('fp_tracking_event', 'experience_checkout_started', [
+            'experience_id'    => (int) ($context['experience']['id'] ?? 0),
+            'experience_title' => (string) ($context['experience']['title'] ?? ''),
+            'page_url'         => isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '',
+        ]);
+    }
 
     private function extract_gf_user_data(array $entry, array $form): array {
         $user_data = [];

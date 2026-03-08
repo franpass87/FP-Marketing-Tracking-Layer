@@ -333,19 +333,32 @@
     });
     document.addEventListener('fpFormAbandon', function (e) {
         var d = e.detail || {};
-        push('form_abandon', { form_id: d.formId, form_title: d.formTitle, time_spent_seconds: d.timeSpent });
+        push('form_abandon', {
+            form_id:            d.formId,
+            form_title:         d.formTitle,
+            time_spent_seconds: d.timeSpent       || 0,
+            fields_filled:      d.fieldsFilledCount || 0,
+        });
     });
 
-    // FP-Bio click
+    // FP-Bio-Standalone: link click
     document.addEventListener('fpBioLinkClick', function (e) {
         var d = e.detail || {};
-        push('click', { element: 'bio_link', label: d.label, url: d.url, link_id: d.linkId });
+        push('bio_link_click', {
+            bio_link_label:    d.label       || '',
+            bio_link_url:      d.url         || '',
+            bio_link_category: d.category    || '',
+        });
     });
 
-    // FP-CTA-Bar click
+    // FP-CTA-Bar: link/bar click
     document.addEventListener('fpCtaBarClick', function (e) {
         var d = e.detail || {};
-        push('click', { element: 'cta_bar', label: d.label, url: d.url, position: d.position });
+        push('cta_bar_click', {
+            cta_label:  d.label  || '',
+            cta_action: d.action || d.url || '',
+            cta_url:    d.url    || '',
+        });
     });
 
     // Generic FP tracking bridge

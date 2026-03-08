@@ -5,32 +5,9 @@ namespace FPTracking\DataLayer;
 /**
  * Normalizes event payloads to GA4-compatible schema before pushing to dataLayer.
  *
- * Event catalogue:
- *
- * --- FP Plugin Events ---
- * purchase, booking_confirmed, booking_submitted, waitlist_joined,
- * event_ticket_purchase, generate_lead, form_view, form_start,
- * form_submit, form_abandon, page_view
- *
- * --- Contact / Micro-conversion Events ---
- * click_phone, click_whatsapp, click_email, click_map,
- * click_social, click_cta, click_external_link
- *
- * --- WooCommerce Events (GA4 Ecommerce) ---
- * view_item_list, view_item, add_to_cart, remove_from_cart,
- * view_cart, begin_checkout, add_payment_info, add_shipping_info,
- * purchase (woo), refund
- *
- * --- WordPress / Content Events ---
- * scroll_depth, video_start, video_progress, video_complete,
- * file_download, site_search, search_results_click,
- * contact_form_submit (CF7 / Gravity Forms / WPForms),
- * newsletter_signup, login, register
- *
- * --- Salient / WPBakery Engagement Events ---
- * accordion_open, tab_switch, popup_open, popup_close,
- * slider_swipe, counter_reached, sticky_header_visible,
- * mega_menu_open, lightbox_open
+ * The full event catalogue is defined in GTMExporter::EVENTS.
+ * This class handles normalization of all known parameter types via
+ * typed sections + a generic pass-through for any extra params.
  */
 final class EventSchema {
 
@@ -118,13 +95,6 @@ final class EventSchema {
 
         // --- Search ---
         foreach (['search_term', 'search_results_count'] as $f) {
-            if (isset($params[$f])) {
-                $normalized[$f] = $params[$f];
-            }
-        }
-
-        // --- Salient / WPBakery engagement ---
-        foreach (['element_type', 'element_id', 'element_title', 'tab_name', 'accordion_title', 'popup_id', 'slider_name', 'direction'] as $f) {
             if (isset($params[$f])) {
                 $normalized[$f] = $params[$f];
             }

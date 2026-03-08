@@ -24,6 +24,13 @@ final class DataLayerManager {
      * @param array  $params
      */
     public function queue_event(string $event_name, array $params = []): void {
+        // Ensure event_id exists before building the payload.
+        // The same ID is used for both the dataLayer push (→ GTM → fbq eventID)
+        // and the server-side dispatch (→ Meta CAPI event_id), enabling deduplication.
+        if (empty($params['event_id'])) {
+            $params['event_id'] = uniqid('fp_', true);
+        }
+
         $event = $this->schema->build($event_name, $params);
         $this->queue[] = $event;
 
@@ -84,17 +91,23 @@ final class DataLayerManager {
     }
 
     private function is_server_side_event(string $event_name): bool {
+        // Must stay in sync with ServerSideDispatcher::META_EVENT_MAP + GA4-only high-value events.
+        // All events here are dispatched to GA4 MP; those in META_EVENT_MAP also go to Meta CAPI.
         $server_side_events = [
             // WooCommerce
             'purchase',
+            'add_to_cart',
+            'begin_checkout',
             // FP-Restaurant
             'booking_confirmed',
+            'booking_submitted',
             'booking_payment_completed',
             'event_ticket_purchase',
             // FP-Forms
             'generate_lead',
             'form_payment_started',
             // FP-Experiences
+            'experience_checkout_started',
             'experience_paid',
             'rtb_submitted',
             'rtb_approved',
