@@ -147,7 +147,8 @@ final class Settings {
             }
             echo '</select>';
         } else {
-            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text">';
+            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id'], true) ? ' is-monospace' : '';
+            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '">';
         }
     }
 
@@ -233,176 +234,401 @@ final class Settings {
         if (!current_user_can('manage_options')) {
             return;
         }
+
+        $labels_count = count(array_filter(
+            array_map(fn(string $e) => $this->get_ads_label($e), array_keys(self::ADS_EVENTS))
+        ));
+        $total_ads    = count(self::ADS_EVENTS);
+        $gtm_ok       = !empty($this->get('gtm_id'));
+        $ga4_ok       = !empty($this->get('ga4_measurement_id')) && !empty($this->get('ga4_api_secret'));
+        $meta_ok      = !empty($this->get('meta_pixel_id')) && !empty($this->get('meta_access_token'));
+        $ads_ok       = !empty($this->get('google_ads_id'));
+        $integrations = apply_filters('fp_tracking_registered_integrations', []);
         ?>
-        <div class="wrap">
-            <h1><?php esc_html_e('FP Marketing Tracking Layer', 'fp-tracking'); ?></h1>
-            <p class="description">
-                <?php esc_html_e('Configure your GTM container and server-side credentials. All FP plugins route their events through this layer.', 'fp-tracking'); ?>
-            </p>
+        <div class="wrap fptracking-admin-page">
+
+            <!-- ══ PAGE HEADER ══════════════════════════════════════════ -->
+            <div class="fptracking-page-header">
+                <div class="fptracking-page-header-content">
+                    <h1>
+                        <span class="dashicons dashicons-chart-line"></span>
+                        <?php esc_html_e('FP Marketing Tracking Layer', 'fp-tracking'); ?>
+                    </h1>
+                    <p><?php esc_html_e('Centralizza tutto il tracking: GTM, GA4, Google Ads, Meta Pixel e server-side CAPI. Tutti i plugin FP instradano gli eventi attraverso questo layer.', 'fp-tracking'); ?></p>
+                </div>
+                <span class="fptracking-page-header-badge">v<?php echo esc_html(FP_TRACKING_VERSION); ?></span>
+            </div>
+
+            <!-- ══ STATUS BAR ════════════════════════════════════════════ -->
+            <div class="fptracking-status-bar">
+                <span class="fptracking-status-pill <?php echo $gtm_ok ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span> GTM <?php echo $gtm_ok ? esc_html($this->get('gtm_id')) : esc_html__('Non configurato', 'fp-tracking'); ?>
+                </span>
+                <span class="fptracking-status-pill <?php echo $ga4_ok ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span> GA4 MP <?php echo $ga4_ok ? esc_html__('Attivo', 'fp-tracking') : esc_html__('Credenziali mancanti', 'fp-tracking'); ?>
+                </span>
+                <span class="fptracking-status-pill <?php echo $meta_ok ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span> Meta CAPI <?php echo $meta_ok ? esc_html__('Attivo', 'fp-tracking') : esc_html__('Credenziali mancanti', 'fp-tracking'); ?>
+                </span>
+                <span class="fptracking-status-pill <?php echo $ads_ok ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span> Google Ads <?php echo $ads_ok ? esc_html__('Configurato', 'fp-tracking') : esc_html__('Non configurato', 'fp-tracking'); ?>
+                </span>
+                <?php if ($labels_count > 0): ?>
+                <span class="fptracking-status-pill <?php echo $labels_count === $total_ads ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span>
+                    <?php printf(esc_html__('Ads Labels: %1$d/%2$d', 'fp-tracking'), $labels_count, $total_ads); ?>
+                </span>
+                <?php endif; ?>
+            </div>
 
             <?php settings_errors('fp_tracking_settings_group'); ?>
-
-            <form method="post" action="options.php">
-                <?php
-                settings_fields('fp_tracking_settings_group');
-                do_settings_sections('fp-tracking');
-                submit_button();
-                ?>
-            </form>
-
-            <hr>
-            <h2><?php esc_html_e('Google Ads — Conversion Labels', 'fp-tracking'); ?></h2>
-            <p class="description">
-                <?php esc_html_e('For each event below, enter the Google Ads Conversion Label (found in Google Ads → Goals → Conversions → select conversion → Tag setup). These labels will be included in the GTM export automatically.', 'fp-tracking'); ?>
-            </p>
-
             <?php if (isset($_GET['updated']) && $_GET['updated'] === 'ads_labels'): ?>
-            <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Conversion labels saved.', 'fp-tracking'); ?></p></div>
+            <div class="fptracking-alert fptracking-alert-success">
+                <span class="dashicons dashicons-yes-alt"></span>
+                <?php esc_html_e('Conversion labels salvati correttamente.', 'fp-tracking'); ?>
+            </div>
             <?php endif; ?>
 
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="fp_tracking_save_ads_labels">
-                <?php wp_nonce_field('fp_tracking_save_ads_labels'); ?>
+            <!-- ══ FORM IMPOSTAZIONI ══════════════════════════════════════ -->
+            <form method="post" action="options.php">
+                <?php settings_fields('fp_tracking_settings_group'); ?>
 
-                <table class="widefat fp-ads-labels-table" style="max-width:780px;margin-top:12px">
-                    <thead>
-                        <tr>
-                            <th style="width:28px"></th>
-                            <th><?php esc_html_e('Event', 'fp-tracking'); ?></th>
-                            <th><?php esc_html_e('FP Event Name', 'fp-tracking'); ?></th>
-                            <th><?php esc_html_e('Google Ads Conversion Label', 'fp-tracking'); ?></th>
-                            <th><?php esc_html_e('Status', 'fp-tracking'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach (self::ADS_EVENTS as $event_name => $event_label):
-                        $saved_label = $this->get_ads_label($event_name);
-                        $has_label   = $saved_label !== '';
-                        $row_style   = $has_label ? 'background:#f0fff4' : '';
-                    ?>
-                        <tr style="<?php echo esc_attr($row_style); ?>">
-                            <td style="text-align:center;font-size:18px">
-                                <?php echo $has_label ? '✅' : '⬜'; ?>
-                            </td>
-                            <td><strong><?php echo esc_html($event_label); ?></strong></td>
-                            <td><code style="font-size:11px;background:#f6f7f7;padding:2px 6px;border-radius:3px"><?php echo esc_html($event_name); ?></code></td>
-                            <td>
-                                <input
-                                    type="text"
-                                    name="fp_ads_labels[<?php echo esc_attr($event_name); ?>]"
-                                    value="<?php echo esc_attr($saved_label); ?>"
-                                    placeholder="es. AbCdEfGhIjKlMnOpQrSt"
-                                    class="regular-text"
-                                    style="font-family:monospace;font-size:12px"
-                                >
-                            </td>
-                            <td>
-                                <?php if ($has_label): ?>
-                                    <span style="color:#2e7d32;font-weight:600">&#10003; <?php esc_html_e('Configured', 'fp-tracking'); ?></span>
-                                <?php else: ?>
-                                    <span style="color:#999">&#8212; <?php esc_html_e('Not set', 'fp-tracking'); ?></span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="5" style="padding:12px 10px">
-                                <p class="description" style="margin:0 0 10px">
-                                    <?php esc_html_e('Where to find the label: Google Ads → Goals → Conversions → click a conversion → Tag setup → Use Google Tag Manager → copy the "Conversion label" value.', 'fp-tracking'); ?>
-                                </p>
-                                <?php submit_button(
-                                    __('Save Conversion Labels', 'fp-tracking'),
-                                    'secondary',
-                                    'submit',
-                                    false
-                                ); ?>
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <!-- Card: Google Tag Manager -->
+                <div class="fptracking-card">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-admin-site-alt3"></span>
+                            <h2><?php esc_html_e('Google Tag Manager', 'fp-tracking'); ?></h2>
+                        </div>
+                        <?php if ($gtm_ok): ?>
+                        <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('Configurato', 'fp-tracking'); ?></span>
+                        <?php else: ?>
+                        <span class="fptracking-badge fptracking-badge-warning"><?php esc_html_e('Richiesto', 'fp-tracking'); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <p class="description"><?php esc_html_e('Il container GTM viene iniettato automaticamente su tutte le pagine del sito. Inserisci il tuo Container ID.', 'fp-tracking'); ?></p>
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label for="fp_gtm_id"><?php esc_html_e('GTM Container ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('gtm_id', 'text', 'GTM-XXXXXXX', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Formato: GTM-XXXXXXX — trovalo in GTM → Admin → Container Settings', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: GA4 Measurement Protocol -->
+                <div class="fptracking-card">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-chart-area"></span>
+                            <h2><?php esc_html_e('Google Analytics 4 — Server-Side', 'fp-tracking'); ?></h2>
+                        </div>
+                        <?php if ($ga4_ok): ?>
+                        <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('Attivo', 'fp-tracking'); ?></span>
+                        <?php else: ?>
+                        <span class="fptracking-badge fptracking-badge-neutral"><?php esc_html_e('Opzionale', 'fp-tracking'); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <p class="description"><?php esc_html_e('Il Measurement Protocol invia gli eventi di conversione direttamente a GA4 lato server, come backup al tag GTM client-side.', 'fp-tracking'); ?></p>
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('GA4 Measurement ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('ga4_measurement_id', 'text', 'G-XXXXXXXXXX', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('GA4 → Admin → Data Streams → scegli stream', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('GA4 API Secret', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('ga4_api_secret', 'password', '', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('GA4 → Admin → Data Streams → Measurement Protocol API secrets', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: Meta -->
+                <div class="fptracking-card">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-share"></span>
+                            <h2><?php esc_html_e('Meta Pixel + Conversions API', 'fp-tracking'); ?></h2>
+                        </div>
+                        <?php if ($meta_ok): ?>
+                        <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('Attivo', 'fp-tracking'); ?></span>
+                        <?php else: ?>
+                        <span class="fptracking-badge fptracking-badge-neutral"><?php esc_html_e('Opzionale', 'fp-tracking'); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <p class="description"><?php esc_html_e('Il Pixel viene iniettato via GTM (client-side). Il CAPI invia gli stessi eventi da server per recuperare le conversioni perse da iOS/ad-blocker. La deduplicazione è automatica via event_id.', 'fp-tracking'); ?></p>
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Meta Pixel ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('meta_pixel_id', 'text', '1234567890', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Meta Business Manager → Events Manager → il tuo Pixel', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Meta Access Token (CAPI)', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('meta_access_token', 'password', '', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Events Manager → Pixel → Settings → Conversions API → genera token', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: Google Ads + Altre piattaforme -->
+                <div class="fptracking-card">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-megaphone"></span>
+                            <h2><?php esc_html_e('Google Ads & Altre Piattaforme', 'fp-tracking'); ?></h2>
+                        </div>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Google Ads Conversion ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('google_ads_id', 'text', 'AW-XXXXXXXXX', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Google Ads → Goals → Conversions → Tag setup → Conversion ID', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Microsoft Clarity Project ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('clarity_project_id', 'text', 'xxxxxxxxxx', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('clarity.microsoft.com → il tuo progetto → Setup → Get tracking code', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: Impostazioni avanzate -->
+                <div class="fptracking-card">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-admin-settings"></span>
+                            <h2><?php esc_html_e('Impostazioni Avanzate', 'fp-tracking'); ?></h2>
+                        </div>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <div class="fptracking-fields-grid" style="margin-bottom:24px">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Durata cookie UTM (giorni)', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('utm_cookie_days', 'number', '90', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Per quanto tempo mantenere i parametri UTM in cookie per l\'attribuzione', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Consent Mode — stato default', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('consent_default', 'select', '', ['denied' => 'Denied (GDPR — raccomandato)', 'granted' => 'Granted']); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Stato iniziale prima che l\'utente esprima il consenso. Usa "Denied" per conformità GDPR.', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+
+                        <p class="fptracking-section-title"><?php esc_html_e('Canali Server-Side', 'fp-tracking'); ?></p>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('GA4 Measurement Protocol', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Invia eventi di conversione a GA4 lato server (richiede Measurement ID + API Secret)', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('server_side_ga4', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('Meta Conversions API (CAPI)', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Invia eventi a Meta lato server per recuperare conversioni perse da iOS/ad-blocker (richiede Pixel ID + Access Token)', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('server_side_meta', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('Debug Mode', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Mostra console.log per ogni evento dataLayer e usa l\'endpoint debug di GA4 MP. Da disattivare in produzione.', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('debug_mode', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div style="margin-top:24px">
+                            <button type="submit" class="fptracking-btn fptracking-btn-primary">
+                                <span class="dashicons dashicons-saved"></span>
+                                <?php esc_html_e('Salva Impostazioni', 'fp-tracking'); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </form>
 
-            <hr>
-            <h2><?php esc_html_e('Export GTM Container', 'fp-tracking'); ?></h2>
-            <p class="description">
-                <?php esc_html_e('Download a ready-to-import GTM container JSON with all tags, triggers and variables pre-configured for this site. Import it in GTM → Admin → Import Container.', 'fp-tracking'); ?>
-            </p>
-            <table class="form-table" style="max-width:700px">
-                <tr>
-                    <th scope="row"><?php esc_html_e('Included in export', 'fp-tracking'); ?></th>
-                    <td>
-                        <ul style="margin:0;list-style:disc;padding-left:1.4em;line-height:1.8">
-                            <li><?php esc_html_e('GA4 Configuration tag (fires on All Pages)', 'fp-tracking'); ?></li>
-                            <li><?php printf(esc_html__('%d GA4 Event tags (one per tracked event)', 'fp-tracking'), count(GTMExporter::EVENTS)); ?></li>
-                            <li><?php esc_html_e('Google Ads Conversion tags for purchase, booking, lead, add_to_cart', 'fp-tracking'); ?></li>
-                            <?php if ($this->get('meta_pixel_id')): ?>
-                            <li><?php esc_html_e('Meta Pixel base code + event tags (Purchase, Lead, Contact…)', 'fp-tracking'); ?></li>
-                            <?php endif; ?>
-                            <li><?php esc_html_e('Consent Mode v2 initialization tag', 'fp-tracking'); ?></li>
-                            <li><?php esc_html_e('dataLayer variables for all event parameters', 'fp-tracking'); ?></li>
-                            <li><?php esc_html_e('Custom Event triggers for every FP event', 'fp-tracking'); ?></li>
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e('Download', 'fp-tracking'); ?></th>
-                    <td>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                            <input type="hidden" name="action" value="fp_tracking_export_gtm">
-                            <?php wp_nonce_field('fp_tracking_export_gtm'); ?>
-                            <?php submit_button(
-                                __('⬇ Download GTM Container JSON', 'fp-tracking'),
-                                'primary',
-                                'submit',
-                                false
-                            ); ?>
-                        </form>
-                        <?php
-                        $labels_count = count(array_filter(
-                            array_map(fn(string $e) => $this->get_ads_label($e), array_keys(self::ADS_EVENTS))
-                        ));
-                        $total_ads = count(self::ADS_EVENTS);
-                        ?>
-                        <p class="description" style="margin-top:8px">
-                            <?php if ($labels_count === $total_ads): ?>
-                                <span style="color:#2e7d32">&#10003; <?php esc_html_e('All Google Ads conversion labels are configured — the export is fully ready.', 'fp-tracking'); ?></span>
-                            <?php elseif ($labels_count > 0): ?>
-                                <span style="color:#e65100">&#9888; <?php printf(
-                                    esc_html__('%1$d of %2$d Google Ads labels configured. Configure the remaining ones above before exporting.', 'fp-tracking'),
-                                    $labels_count,
-                                    $total_ads
-                                ); ?></span>
-                            <?php else: ?>
-                                <span style="color:#c62828">&#9888; <?php esc_html_e('No Google Ads conversion labels configured yet. Set them above to include them in the export.', 'fp-tracking'); ?></span>
-                            <?php endif; ?>
-                        </p>
-                    </td>
-                </tr>
-            </table>
+            <!-- ══ GOOGLE ADS CONVERSION LABELS ═════════════════════════ -->
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-tag"></span>
+                        <h2><?php esc_html_e('Google Ads — Conversion Labels', 'fp-tracking'); ?></h2>
+                    </div>
+                    <?php if ($labels_count === $total_ads): ?>
+                    <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('Tutti configurati', 'fp-tracking'); ?></span>
+                    <?php elseif ($labels_count > 0): ?>
+                    <span class="fptracking-badge fptracking-badge-warning"><?php printf(esc_html__('%1$d/%2$d configurati', 'fp-tracking'), $labels_count, $total_ads); ?></span>
+                    <?php else: ?>
+                    <span class="fptracking-badge fptracking-badge-neutral"><?php esc_html_e('Nessuno configurato', 'fp-tracking'); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Per ogni evento inserisci il Conversion Label di Google Ads. Verrà incluso automaticamente nel JSON GTM esportato. Trovalo in: Google Ads → Goals → Conversions → seleziona conversione → Tag setup → Use Google Tag Manager → copia "Conversion label".', 'fp-tracking'); ?></p>
 
-            <hr>
-            <h2><?php esc_html_e('Active Integrations', 'fp-tracking'); ?></h2>
-            <table class="widefat" style="max-width:600px">
-                <thead><tr><th><?php esc_html_e('Plugin', 'fp-tracking'); ?></th><th><?php esc_html_e('Status', 'fp-tracking'); ?></th></tr></thead>
-                <tbody>
-                <?php
-                $integrations = apply_filters('fp_tracking_registered_integrations', []);
-                if (empty($integrations)) {
-                    echo '<tr><td colspan="2">' . esc_html__('No integrations registered yet.', 'fp-tracking') . '</td></tr>';
-                } else {
-                    foreach ($integrations as $name => $active) {
-                        $badge = $active
-                            ? '<span style="color:green">&#10003; ' . esc_html__('Active', 'fp-tracking') . '</span>'
-                            : '<span style="color:#aaa">&#8212; ' . esc_html__('Inactive', 'fp-tracking') . '</span>';
-                        echo '<tr><td>' . esc_html($name) . '</td><td>' . $badge . '</td></tr>';
-                    }
-                }
-                ?>
-                </tbody>
-            </table>
-        </div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="fp_tracking_save_ads_labels">
+                        <?php wp_nonce_field('fp_tracking_save_ads_labels'); ?>
+
+                        <table class="fptracking-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px"></th>
+                                    <th><?php esc_html_e('Evento', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Nome evento FP', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Conversion Label', 'fp-tracking'); ?></th>
+                                    <th style="width:110px"><?php esc_html_e('Stato', 'fp-tracking'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach (self::ADS_EVENTS as $event_name => $event_label):
+                                $saved_label = $this->get_ads_label($event_name);
+                                $has_label   = $saved_label !== '';
+                            ?>
+                                <tr class="<?php echo $has_label ? 'is-configured' : ''; ?>">
+                                    <td style="text-align:center;font-size:16px;padding:10px 8px">
+                                        <?php if ($has_label): ?>
+                                            <span class="dashicons dashicons-yes-alt" style="color:#10b981"></span>
+                                        <?php else: ?>
+                                            <span class="dashicons dashicons-minus" style="color:#d1d5db"></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><strong><?php echo esc_html($event_label); ?></strong></td>
+                                    <td><code><?php echo esc_html($event_name); ?></code></td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            name="fp_ads_labels[<?php echo esc_attr($event_name); ?>]"
+                                            value="<?php echo esc_attr($saved_label); ?>"
+                                            placeholder="AbCdEfGhIjKlMnOpQrSt"
+                                        >
+                                    </td>
+                                    <td>
+                                        <?php if ($has_label): ?>
+                                            <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('OK', 'fp-tracking'); ?></span>
+                                        <?php else: ?>
+                                            <span class="fptracking-badge fptracking-badge-neutral">&#8212; <?php esc_html_e('Mancante', 'fp-tracking'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5">
+                                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                                            <span class="dashicons dashicons-saved"></span>
+                                            <?php esc_html_e('Salva Conversion Labels', 'fp-tracking'); ?>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ══ EXPORT GTM ════════════════════════════════════════════ -->
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-download"></span>
+                        <h2><?php esc_html_e('Esporta Container GTM', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Scarica il container GTM pronto all\'importazione con tutti i tag, trigger e variabili pre-configurati per questo sito. Importalo in GTM → Admin → Import Container.', 'fp-tracking'); ?></p>
+
+                    <ul class="fptracking-export-checklist">
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Tag GA4 Configuration (All Pages)', 'fp-tracking'); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span> <strong><?php echo esc_html(count(GTMExporter::EVENTS)); ?></strong> <?php esc_html_e('GA4 Event tag (uno per evento tracciato)', 'fp-tracking'); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Google Ads Conversion tag per acquisti, prenotazioni, lead', 'fp-tracking'); ?></li>
+                        <?php if ($this->get('meta_pixel_id')): ?>
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Meta Pixel base code + event tag (Purchase, Lead, Contact…)', 'fp-tracking'); ?></li>
+                        <?php endif; ?>
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Consent Mode v2 initialization tag', 'fp-tracking'); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Variabili dataLayer per tutti i parametri evento', 'fp-tracking'); ?></li>
+                        <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Custom Event trigger per ogni evento FP', 'fp-tracking'); ?></li>
+                    </ul>
+
+                    <?php if ($labels_count < $total_ads): ?>
+                    <div class="fptracking-alert fptracking-alert-warning" style="margin-bottom:16px">
+                        <span class="dashicons dashicons-warning"></span>
+                        <?php if ($labels_count === 0): ?>
+                            <?php esc_html_e('Nessun Conversion Label Google Ads configurato. I tag Ads nel JSON avranno il campo label vuoto — configurali nella sezione sopra prima di esportare.', 'fp-tracking'); ?>
+                        <?php else: ?>
+                            <?php printf(
+                                esc_html__('%1$d di %2$d Conversion Label configurati. Configura i rimanenti sopra per un export completo.', 'fp-tracking'),
+                                $labels_count,
+                                $total_ads
+                            ); ?>
+                        <?php endif; ?>
+                    </div>
+                    <?php else: ?>
+                    <div class="fptracking-alert fptracking-alert-success" style="margin-bottom:16px">
+                        <span class="dashicons dashicons-yes-alt"></span>
+                        <?php esc_html_e('Tutti i Conversion Label sono configurati — il container è pronto per l\'esportazione.', 'fp-tracking'); ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="fp_tracking_export_gtm">
+                        <?php wp_nonce_field('fp_tracking_export_gtm'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-primary">
+                            <span class="dashicons dashicons-download"></span>
+                            <?php esc_html_e('Scarica GTM Container JSON', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ══ INTEGRAZIONI ATTIVE ═══════════════════════════════════ -->
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-networking"></span>
+                        <h2><?php esc_html_e('Integrazioni Plugin FP', 'fp-tracking'); ?></h2>
+                    </div>
+                    <?php if (!empty($integrations)): ?>
+                    <span class="fptracking-badge fptracking-badge-info"><?php echo count(array_filter($integrations)); ?> <?php esc_html_e('attive', 'fp-tracking'); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="fptracking-card-body">
+                    <?php if (empty($integrations)): ?>
+                        <p style="color:var(--fpdms-text-muted);font-size:13px;margin:0"><?php esc_html_e('Nessuna integrazione registrata. Attiva i plugin FP (Forms, Restaurant, Experiences, CTA Bar, Bio) per vederle comparire qui.', 'fp-tracking'); ?></p>
+                    <?php else: ?>
+                        <div class="fptracking-integrations-grid">
+                            <?php foreach ($integrations as $name => $active): ?>
+                            <div class="fptracking-integration-item <?php echo $active ? 'is-active' : ''; ?>">
+                                <span class="dashicons <?php echo $active ? 'dashicons-yes-alt' : 'dashicons-minus'; ?>"></span>
+                                <?php echo esc_html($name); ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div><!-- .fptracking-admin-page -->
         <?php
     }
 }
