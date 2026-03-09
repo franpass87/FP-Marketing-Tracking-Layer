@@ -6,7 +6,8 @@
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
- * Author:            Francesco Passarelli
+ * Author:            Francesco Passeri
+ * Author URI:        https://francescopasseri.com
  * License:           Proprietary
  * Text Domain:       fp-tracking
  */

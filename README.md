@@ -128,3 +128,11 @@ gtag('consent', 'update', {
 
 ## Changelog
 Vedi [CHANGELOG.md](CHANGELOG.md)
+---
+
+## Autore
+
+**Francesco Passeri**
+- Sito: [francescopasseri.com](https://francescopasseri.com)
+- Email: [info@francescopasseri.com](mailto:info@francescopasseri.com)
+- GitHub: [github.com/franpass87](https://github.com/franpass87)
