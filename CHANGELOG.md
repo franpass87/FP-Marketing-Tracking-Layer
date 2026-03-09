@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.0.1] - 2026-03-09
+### Changed
+- Sync README, composer, Plugin, GTM/Events
+
 ## [1.0.0] - 2026-03-08
 ### Added
 - Initial release
