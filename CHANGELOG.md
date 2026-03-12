@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.0.3] - 2026-03-12
+### Changed
+- Require PHP 8.1+ (plugin usa `readonly`, introdotto in PHP 8.1)
+
 ## [1.0.2] - 2026-03-12
 ### Fixed
 - Rimosso trailing comma in array `$server_side_events` (DataLayerManager) per compatibilità PHP

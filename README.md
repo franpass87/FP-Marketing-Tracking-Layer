@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.0.3-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
