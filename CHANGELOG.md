@@ -2,6 +2,13 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.0.4] - 2026-03-12
+### Changed
+- Vendor incluso nel repository (rimosso da .gitignore)
+- Check vendor mancante con admin notice invece di fatal
+### Fixed
+- Fatal "Class FPTracking\Core\Plugin not found" quando vendor non deployato
+
 ## [1.0.3] - 2026-03-12
 ### Changed
 - Require PHP 8.1+ (plugin usa `readonly`, introdotto in PHP 8.1)
