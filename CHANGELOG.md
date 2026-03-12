@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.0.2] - 2026-03-12
+### Fixed
+- Rimosso trailing comma in array `$server_side_events` (DataLayerManager) per compatibilità PHP
+
 ## [1.0.1] - 2026-03-09
 ### Changed
 - Sync README, composer, Plugin, GTM/Events

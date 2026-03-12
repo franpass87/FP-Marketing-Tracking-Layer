@@ -111,7 +111,7 @@ final class DataLayerManager {
             'experience_paid',
             'rtb_submitted',
             'rtb_approved',
-            'gift_purchased',
+            'gift_purchased'
         ];
         return in_array($event_name, $server_side_events, true)
             && apply_filters('fp_tracking_server_side_enabled', true, $event_name);
