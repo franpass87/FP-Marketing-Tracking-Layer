@@ -5,7 +5,7 @@ namespace FPTracking\DataLayer;
 /**
  * Normalizes event payloads to GA4-compatible schema before pushing to dataLayer.
  *
- * The full event catalogue is defined in GTMExporter::EVENTS.
+ * The full event catalogue is defined in Catalog\EventCatalog::EVENTS.
  * This class handles normalization of all known parameter types via
  * typed sections + a generic pass-through for any extra params.
  */

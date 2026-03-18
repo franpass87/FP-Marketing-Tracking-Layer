@@ -3,6 +3,10 @@
 namespace FPTracking\ServerSide;
 
 use FPTracking\Admin\Settings;
+use FPTracking\Catalog\EventCatalog;
+use FPTracking\Brevo\BrevoClient;
+use FPTracking\Brevo\BrevoDispatcher;
+use FPTracking\Brevo\BrevoMapper;
 
 /**
  * Orchestrates server-side event dispatch to GA4 and Meta.
@@ -12,40 +16,23 @@ final class ServerSideDispatcher {
 
     private GA4MeasurementProtocol $ga4;
     private MetaConversionsAPI $meta;
+    private BrevoDispatcher $brevo;
 
     public function __construct(private readonly Settings $settings) {
         $this->ga4  = new GA4MeasurementProtocol($settings);
         $this->meta = new MetaConversionsAPI($settings);
+        $this->brevo = new BrevoDispatcher($settings, new BrevoClient($settings), new BrevoMapper());
     }
 
     /**
      * Maps FP event names to their Meta standard event equivalent.
-     * Must stay in sync with GTMExporter::META_EVENT_MAP.
+     * Source of truth: EventCatalog::META_EVENT_MAP.
      * Events not listed here are sent to GA4 only (no Meta CAPI).
      *
      * Note: click_phone, click_whatsapp, sign_up are client-side only —
      * no server-side user_data available, so excluded from CAPI.
      */
-    private const META_EVENT_MAP = [
-        // Revenue / Purchase
-        'purchase'                    => 'Purchase',
-        'event_ticket_purchase'       => 'Purchase',
-        'booking_confirmed'           => 'Purchase',
-        'booking_payment_completed'   => 'Purchase',
-        'experience_paid'             => 'Purchase',
-        'rtb_approved'                => 'Purchase',
-        'gift_purchased'              => 'Purchase',
-        // Checkout / Funnel
-        'begin_checkout'              => 'InitiateCheckout',
-        'booking_submitted'           => 'InitiateCheckout',
-        'experience_checkout_started' => 'InitiateCheckout',
-        'form_payment_started'        => 'InitiateCheckout',
-        // Cart
-        'add_to_cart'                 => 'AddToCart',
-        // Lead
-        'generate_lead'               => 'Lead',
-        'rtb_submitted'               => 'Lead',
-    ];
+    private const META_EVENT_MAP = EventCatalog::META_EVENT_MAP;
 
     /**
      * Dispatches server-side events to GA4 MP and Meta CAPI.
@@ -55,23 +42,56 @@ final class ServerSideDispatcher {
      * @param array  $params      Event parameters (same as passed to fp_tracking_event)
      */
     public function dispatch(string $event_name, array $params): void {
+        $this->dispatch_with_result($event_name, $params);
+    }
+
+    /**
+     * Dispatches and returns structured outcome for queue worker.
+     *
+     * @return array{ok:bool,attempted:int,error:string}
+     */
+    public function dispatch_with_result(string $event_name, array $params): array {
         // event_id is always set by DataLayerManager before this action fires,
         // ensuring the same ID is used in both the dataLayer push and the CAPI call.
         $event_id  = (string) ($params['event_id'] ?? uniqid('fp_', true));
         $client_id = GA4MeasurementProtocol::extract_client_id();
         $user_data = $params['user_data'] ?? [];
+        $attempted = 0;
+        $errors = [];
 
         // ── GA4 Measurement Protocol ─────────────────────────────────────────
         $ga4_params = $this->build_ga4_params($event_name, $params);
-        $this->ga4->send($event_name, $ga4_params, $client_id, $event_id, $user_data);
+        if ($this->ga4->is_enabled()) {
+            $attempted++;
+            if (!$this->ga4->send($event_name, $ga4_params, $client_id, $event_id, $user_data)) {
+                $errors[] = 'GA4 send failed';
+            }
+        }
 
         // ── Meta Conversions API ─────────────────────────────────────────────
         $meta_event = self::META_EVENT_MAP[$event_name] ?? null;
-        if ($meta_event !== null) {
+        if ($meta_event !== null && $this->meta->is_enabled()) {
+            $attempted++;
             $meta_custom    = $this->build_meta_custom($event_name, $params);
             $source_url     = (string) ($params['page_url'] ?? $params['event_source_url'] ?? '');
-            $this->meta->send($meta_event, $meta_custom, $user_data, $source_url, $event_id);
+            if (!$this->meta->send($meta_event, $meta_custom, $user_data, $source_url, $event_id)) {
+                $errors[] = 'Meta send failed';
+            }
         }
+
+        // ── Brevo Events API ─────────────────────────────────────────────────
+        if ($this->brevo->is_enabled()) {
+            $attempted++;
+            if (!$this->brevo->dispatch($event_name, $params)) {
+                $errors[] = 'Brevo send failed';
+            }
+        }
+
+        return [
+            'ok' => $errors === [],
+            'attempted' => $attempted,
+            'error' => implode('; ', $errors),
+        ];
     }
 
     /**
@@ -103,10 +123,7 @@ final class ServerSideDispatcher {
         ];
 
         // Revenue events: include contents for Meta product catalog matching
-        $revenue_events = [
-            'purchase', 'booking_confirmed', 'booking_payment_completed',
-            'event_ticket_purchase', 'experience_paid', 'rtb_approved', 'gift_purchased',
-        ];
+        $revenue_events = EventCatalog::META_REVENUE_EVENTS;
 
         if (in_array($event_name, $revenue_events, true)) {
             if (!empty($params['items'])) {
@@ -122,6 +139,9 @@ final class ServerSideDispatcher {
                 $custom['content_type'] = 'product';
             } elseif (!empty($params['reservation_id'])) {
                 $custom['contents']     = [['id' => 'resv-' . $params['reservation_id'], 'quantity' => 1]];
+                $custom['content_type'] = 'product';
+            } elseif (!empty($params['order_id'])) {
+                $custom['contents']     = [['id' => 'order-' . $params['order_id'], 'quantity' => 1]];
                 $custom['content_type'] = 'product';
             }
         }

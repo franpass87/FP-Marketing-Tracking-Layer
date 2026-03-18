@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FPTracking\Admin;
 
+use FPTracking\Catalog\EventCatalog;
+
 /**
  * Generates a GTM container JSON export ready to import in Google Tag Manager.
  *
@@ -16,118 +18,10 @@ namespace FPTracking\Admin;
 final class GTMExporter {
 
     /** All events fired by the FP tracking stack */
-    public const EVENTS = [
-        // ── WooCommerce ──────────────────────────────────────────────────────
-        'view_item'              => ['label' => 'View Item',              'type' => 'ga4'],
-        'add_to_cart'            => ['label' => 'Add to Cart',            'type' => 'ga4+meta+ads'],
-        'begin_checkout'         => ['label' => 'Begin Checkout',         'type' => 'ga4+meta'],
-        'purchase'               => ['label' => 'Purchase',               'type' => 'ga4+meta+ads'],
-
-        // ── Lead / Contatti ──────────────────────────────────────────────────
-        'generate_lead'          => ['label' => 'Generate Lead',          'type' => 'ga4+meta+ads'],
-        'click_phone'            => ['label' => 'Phone Click',            'type' => 'ga4+meta'],
-        'click_whatsapp'         => ['label' => 'WhatsApp Click',         'type' => 'ga4+meta'],
-        'click_email'            => ['label' => 'Email Click',            'type' => 'ga4'],
-        'click_map'              => ['label' => 'Map Click',              'type' => 'ga4'],
-        'click_cta'              => ['label' => 'CTA Click',              'type' => 'ga4'],
-        'click_social'           => ['label' => 'Social Click',           'type' => 'ga4'],
-        'click_external_link'    => ['label' => 'External Link Click',    'type' => 'ga4'],
-        'sign_up'                => ['label' => 'Sign Up',                'type' => 'ga4+meta'],
-
-        // ── Engagement (solo eventi con valore decisionale) ──────────────────
-        'scroll_depth'           => ['label' => 'Scroll Depth',          'type' => 'ga4'],
-        'video_complete'         => ['label' => 'Video Complete',         'type' => 'ga4'],
-        'file_download'          => ['label' => 'File Download',         'type' => 'ga4'],
-        'search'                 => ['label' => 'Search',                 'type' => 'ga4'],
-
-        // ── WordPress / CF7 / GF / WPForms ──────────────────────────────────
-        'contact_form_submit'    => ['label' => 'Contact Form Submit',    'type' => 'ga4'],
-        'login'                  => ['label' => 'Login',                  'type' => 'ga4'],
-
-        // ── FP-Forms ─────────────────────────────────────────────────────────
-        'form_view'              => ['label' => 'Form View',              'type' => 'ga4'],
-        'form_start'             => ['label' => 'Form Start',             'type' => 'ga4'],
-        'form_step_complete'     => ['label' => 'Form Step Complete',     'type' => 'ga4'],
-        'form_abandon'           => ['label' => 'Form Abandon',           'type' => 'ga4'],
-        'form_submit_attempt'    => ['label' => 'Form Submit Attempt',    'type' => 'ga4'],
-        'fp_form_submit_success' => ['label' => 'FP Form Submit Success', 'type' => 'ga4'],
-        'form_payment_started'   => ['label' => 'Form Payment Started',   'type' => 'ga4+meta+ads'],
-
-        // ── FP-Restaurant-Reservations ───────────────────────────────────────
-        'booking_form_view'         => ['label' => 'Booking Form View',         'type' => 'ga4'],
-        'booking_form_start'        => ['label' => 'Booking Form Start',        'type' => 'ga4'],
-        'booking_step_complete'     => ['label' => 'Booking Step Complete',     'type' => 'ga4'],
-        'booking_form_abandon'      => ['label' => 'Booking Form Abandon',      'type' => 'ga4'],
-        'booking_submit_error'      => ['label' => 'Booking Submit Error',      'type' => 'ga4'],
-        'booking_submitted'         => ['label' => 'Booking Submitted',         'type' => 'ga4+meta'],
-        'booking_confirmed'         => ['label' => 'Booking Confirmed',         'type' => 'ga4+meta+ads'],
-        'booking_payment_required'  => ['label' => 'Booking Payment Required',  'type' => 'ga4'],
-        'booking_payment_completed' => ['label' => 'Booking Payment Completed', 'type' => 'ga4+meta+ads'],
-        'booking_cancelled'         => ['label' => 'Booking Cancelled',         'type' => 'ga4'],
-        'booking_no_show'           => ['label' => 'Booking No Show',           'type' => 'ga4'],
-        'booking_visited'           => ['label' => 'Booking Visited',           'type' => 'ga4'],
-        'booking_moved'             => ['label' => 'Booking Moved',             'type' => 'ga4'],
-        'waitlist_joined'           => ['label' => 'Waitlist Joined',           'type' => 'ga4'],
-        'waitlist_promoted'         => ['label' => 'Waitlist Promoted',         'type' => 'ga4'],
-        'survey_submitted'          => ['label' => 'Survey Submitted',          'type' => 'ga4'],
-        'event_ticket_purchase'     => ['label' => 'Event Ticket Purchase',     'type' => 'ga4+meta+ads'],
-
-        // ── FP-Experiences ───────────────────────────────────────────────────
-        'experience_view'             => ['label' => 'Experience View',             'type' => 'ga4'],
-        'experience_checkout_view'    => ['label' => 'Experience Checkout View',    'type' => 'ga4'],
-        'gift_redeem_view'            => ['label' => 'Gift Redeem View',            'type' => 'ga4'],
-        'booking_start'               => ['label' => 'Booking Start',               'type' => 'ga4'],
-        'booking_abandon'             => ['label' => 'Booking Abandon',             'type' => 'ga4'],
-        'rtb_start'                   => ['label' => 'RTB Start',                   'type' => 'ga4'],
-        'gift_start'                  => ['label' => 'Gift Start',                  'type' => 'ga4'],
-        'experience_checkout_started' => ['label' => 'Experience Checkout Started', 'type' => 'ga4+meta'],
-        'experience_paid'             => ['label' => 'Experience Paid',             'type' => 'ga4+meta+ads'],
-        'experience_cancelled'        => ['label' => 'Experience Cancelled',        'type' => 'ga4'],
-        // RTB
-        'rtb_submitted'               => ['label' => 'RTB Submitted',               'type' => 'ga4+meta+ads'],
-        'rtb_approved'                => ['label' => 'RTB Approved',                'type' => 'ga4+meta+ads'],
-        'rtb_declined'                => ['label' => 'RTB Declined',                'type' => 'ga4'],
-        'rtb_hold_expired'            => ['label' => 'RTB Hold Expired',            'type' => 'ga4'],
-        // Gift
-        'gift_purchased'              => ['label' => 'Gift Purchased',              'type' => 'ga4+meta+ads'],
-        'gift_redeemed'               => ['label' => 'Gift Redeemed',               'type' => 'ga4'],
-
-        // ── FP-Forms (funnel) ────────────────────────────────────────────────
-        'form_submit_error'           => ['label' => 'Form Submit Error',           'type' => 'ga4'],
-
-        // ── FP-CTA-Bar ───────────────────────────────────────────────────────
-        'cta_bar_click'               => ['label' => 'CTA Bar Click',               'type' => 'ga4'],
-
-        // ── FP-Bio-Standalone ────────────────────────────────────────────────
-        'bio_link_click'              => ['label' => 'Bio Link Click',              'type' => 'ga4'],
-    ];
+    public const EVENTS = EventCatalog::EVENTS;
 
     /** Meta event mapping: FP event → Meta standard event */
-    private const META_EVENT_MAP = [
-        // Acquisti / Revenue
-        'purchase'                    => 'Purchase',
-        'event_ticket_purchase'       => 'Purchase',
-        'booking_confirmed'           => 'Purchase',
-        'booking_payment_completed'   => 'Purchase',
-        'experience_paid'             => 'Purchase',
-        'rtb_approved'                => 'Purchase',
-        'gift_purchased'              => 'Purchase',
-        // Checkout / Funnel
-        'begin_checkout'              => 'InitiateCheckout',
-        'booking_submitted'           => 'InitiateCheckout',
-        'experience_checkout_started' => 'InitiateCheckout',
-        'form_payment_started'        => 'InitiateCheckout',
-        // Carrello
-        'add_to_cart'                 => 'AddToCart',
-        // Lead
-        'generate_lead'               => 'Lead',
-        'rtb_submitted'               => 'Lead',
-        // Contatti
-        'click_phone'                 => 'Contact',
-        'click_whatsapp'              => 'Contact',
-        // Registrazione
-        'sign_up'                     => 'CompleteRegistration',
-    ];
+    private const META_EVENT_MAP = EventCatalog::META_EVENT_MAP;
 
     /** Google Ads conversion events — driven by Settings::ADS_EVENTS */
 
@@ -242,6 +136,12 @@ final class GTMExporter {
             'bio_link_label'    => 'FP - DL bio_link_label',
             'bio_link_url'      => 'FP - DL bio_link_url',
             'bio_link_category' => 'FP - DL bio_link_category',
+            // FP-Discount-Gift
+            'coupon'            => 'FP - DL coupon',
+            'reason'            => 'FP - DL reason',
+            'voucher_id'        => 'FP - DL voucher_id',
+            'order_id'          => 'FP - DL order_id',
+            'source'            => 'FP - DL source',
             // Error events
             'error_message'     => 'FP - DL error_message',
             'error_type'        => 'FP - DL error_type',
@@ -663,6 +563,41 @@ final class GTMExporter {
                 'bio_link_label'    => $variables['bio_link_label']['name'],
                 'bio_link_url'      => $variables['bio_link_url']['name'],
                 'bio_link_category' => $variables['bio_link_category']['name'],
+            ],
+
+            // ── FP-Discount-Gift ────────────────────────────────────────────
+            $event_name === 'discount_applied' => [
+                'coupon'   => $variables['coupon']['name'],
+                'value'    => $variables['value']['name'],
+                'currency' => $variables['currency']['name'],
+                'source'   => $variables['source']['name'],
+            ],
+            $event_name === 'discount_code_attempted' => [
+                'coupon'   => $variables['coupon']['name'],
+                'currency' => $variables['currency']['name'],
+                'source'   => $variables['source']['name'],
+            ],
+            $event_name === 'discount_code_rejected' => [
+                'coupon'   => $variables['coupon']['name'],
+                'reason'   => $variables['reason']['name'],
+                'currency' => $variables['currency']['name'],
+                'source'   => $variables['source']['name'],
+            ],
+            $event_name === 'discount_removed' => [
+                'coupon'   => $variables['coupon']['name'],
+                'currency' => $variables['currency']['name'],
+                'source'   => $variables['source']['name'],
+            ],
+            $event_name === 'gift_voucher_purchased' => [
+                'voucher_id' => $variables['voucher_id']['name'],
+                'order_id'   => $variables['order_id']['name'],
+                'source'     => $variables['source']['name'],
+            ],
+            $event_name === 'gift_voucher_redeemed' => [
+                'voucher_id'     => $variables['voucher_id']['name'],
+                'order_id'       => $variables['order_id']['name'],
+                'reservation_id' => $variables['reservation_id']['name'],
+                'source'         => $variables['source']['name'],
             ],
 
             default => [],

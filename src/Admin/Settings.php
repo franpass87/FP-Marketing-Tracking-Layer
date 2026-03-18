@@ -2,6 +2,14 @@
 
 namespace FPTracking\Admin;
 
+use FPTracking\Audit\ConsentAuditService;
+use FPTracking\Catalog\EventCatalog;
+use FPTracking\Health\EventHealthService;
+use FPTracking\Inspector\EventInspector;
+use FPTracking\Queue\EventQueueRepository;
+use FPTracking\Rules\EventRuleEngine;
+use FPTracking\Validation\EventValidator;
+
 /**
  * Manages plugin settings stored in wp_options under 'fp_tracking_settings'.
  * Registers the admin page under the FP suite menu.
@@ -25,6 +33,10 @@ final class Settings {
         'server_side_meta'   => true,
         'utm_cookie_days'    => 90,
         'consent_default'    => 'denied',
+        'inspector_sample_rate' => 10,
+        'brevo_enabled'      => false,
+        'brevo_api_key'      => '',
+        'brevo_endpoint'     => 'https://api.brevo.com/v3/events',
         'ads_labels'         => [],
     ];
 
@@ -51,6 +63,8 @@ final class Settings {
     ];
 
     private array $data;
+    private ?EventQueueRepository $queue = null;
+    private ?EventHealthService $healthService = null;
 
     public function __construct() {
         $saved      = get_option(self::OPTION_KEY, []);
@@ -77,12 +91,116 @@ final class Settings {
         return $this->data;
     }
 
-    public function register_admin_hooks(): void {
+    /**
+     * Builds a consistency report for the central event catalog.
+     *
+     * @return array{
+     *   healthy:bool,
+     *   events_count:int,
+     *   meta_map_count:int,
+     *   server_side_count:int,
+     *   required_rules_count:int,
+     *   issues:array<int,string>
+     * }
+     */
+    private function build_catalog_health(): array {
+        $events = EventCatalog::EVENTS;
+        $metaMap = EventCatalog::META_EVENT_MAP;
+        $serverSideEvents = EventCatalog::SERVER_SIDE_EVENTS;
+        $requiredRules = EventCatalog::REQUIRED_FIELDS;
+        $issues = [];
+
+        foreach ($events as $eventName => $meta) {
+            if (!is_array($meta)) {
+                $issues[] = sprintf('Evento "%s": definizione non valida.', $eventName);
+                continue;
+            }
+
+            $label = (string) ($meta['label'] ?? '');
+            $type = (string) ($meta['type'] ?? '');
+
+            if ($label === '') {
+                $issues[] = sprintf('Evento "%s": label mancante.', $eventName);
+            }
+
+            if ($type === '') {
+                $issues[] = sprintf('Evento "%s": type mancante.', $eventName);
+            }
+        }
+
+        foreach ($metaMap as $eventName => $metaEvent) {
+            if (!isset($events[$eventName])) {
+                $issues[] = sprintf('Meta map: evento "%s" non presente nel catalogo eventi.', $eventName);
+            }
+
+            if (!is_string($metaEvent) || trim($metaEvent) === '') {
+                $issues[] = sprintf('Meta map: evento "%s" ha valore Meta non valido.', $eventName);
+            }
+        }
+
+        foreach ($serverSideEvents as $eventName) {
+            if (!isset($events[$eventName])) {
+                $issues[] = sprintf('Server-side: evento "%s" non presente nel catalogo eventi.', $eventName);
+            }
+        }
+
+        foreach ($requiredRules as $eventName => $fields) {
+            if (!isset($events[$eventName])) {
+                $issues[] = sprintf('Required fields: evento "%s" non presente nel catalogo eventi.', $eventName);
+                continue;
+            }
+
+            if (!is_array($fields)) {
+                $issues[] = sprintf('Required fields: evento "%s" ha una regola non valida.', $eventName);
+                continue;
+            }
+
+            foreach ($fields as $field) {
+                if (!is_string($field) || trim($field) === '') {
+                    $issues[] = sprintf('Required fields: evento "%s" contiene un campo non valido.', $eventName);
+                }
+            }
+        }
+
+        return [
+            'healthy' => $issues === [],
+            'events_count' => count($events),
+            'meta_map_count' => count($metaMap),
+            'server_side_count' => count($serverSideEvents),
+            'required_rules_count' => count($requiredRules),
+            'issues' => $issues,
+        ];
+    }
+
+    /**
+     * Builds a deterministic fingerprint for the event catalog configuration.
+     */
+    private function build_catalog_fingerprint(): string {
+        $snapshot = [
+            'events' => EventCatalog::EVENTS,
+            'meta_event_map' => EventCatalog::META_EVENT_MAP,
+            'server_side_events' => EventCatalog::SERVER_SIDE_EVENTS,
+            'meta_revenue_events' => EventCatalog::META_REVENUE_EVENTS,
+            'required_fields' => EventCatalog::REQUIRED_FIELDS,
+        ];
+
+        $json = (string) wp_json_encode($snapshot, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return hash('sha256', $json);
+    }
+
+    public function register_admin_hooks(?EventQueueRepository $queue = null, ?EventHealthService $healthService = null): void {
+        $this->queue = $queue;
+        $this->healthService = $healthService;
         add_action('admin_menu', [$this, 'add_menu_page']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('admin_post_fp_tracking_export_gtm', [$this, 'handle_gtm_export']);
         add_action('admin_post_fp_tracking_save_ads_labels', [$this, 'handle_save_ads_labels']);
+        add_action('admin_post_fp_tracking_retry_failed', [$this, 'handle_retry_failed']);
+        add_action('admin_post_fp_tracking_save_rules', [$this, 'handle_save_rules']);
+        add_action('admin_post_fp_tracking_export_mapping', [$this, 'handle_export_mapping']);
+        add_action('admin_post_fp_tracking_import_mapping', [$this, 'handle_import_mapping']);
+        add_action('admin_post_fp_tracking_export_catalog_health', [$this, 'handle_export_catalog_health']);
     }
 
     public function add_menu_page(): void {
@@ -119,6 +237,10 @@ final class Settings {
         $this->add_field('consent_default', __('Default Consent State', 'fp-tracking'), 'fp_tracking_advanced', 'select', 'denied', ['denied' => 'Denied (GDPR)', 'granted' => 'Granted']);
         $this->add_field('server_side_ga4', __('Enable GA4 Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
         $this->add_field('server_side_meta', __('Enable Meta CAPI Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
+        $this->add_field('brevo_enabled', __('Enable Brevo Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
+        $this->add_field('brevo_api_key', __('Brevo API Key', 'fp-tracking'), 'fp_tracking_advanced', 'password', '');
+        $this->add_field('brevo_endpoint', __('Brevo Endpoint', 'fp-tracking'), 'fp_tracking_advanced', 'text', 'https://api.brevo.com/v3/events');
+        $this->add_field('inspector_sample_rate', __('Inspector Sample Rate (%)', 'fp-tracking'), 'fp_tracking_advanced', 'number', '10');
         $this->add_field('debug_mode', __('Debug Mode', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
     }
 
@@ -147,7 +269,7 @@ final class Settings {
             }
             echo '</select>';
         } else {
-            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id'], true) ? ' is-monospace' : '';
+            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id', 'brevo_api_key', 'brevo_endpoint'], true) ? ' is-monospace' : '';
             echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '">';
         }
     }
@@ -168,6 +290,10 @@ final class Settings {
         $clean['consent_default']    = in_array($input['consent_default'] ?? '', ['denied', 'granted'], true) ? $input['consent_default'] : 'denied';
         $clean['server_side_ga4']    = !empty($input['server_side_ga4']);
         $clean['server_side_meta']   = !empty($input['server_side_meta']);
+        $clean['brevo_enabled']      = !empty($input['brevo_enabled']);
+        $clean['brevo_api_key']      = sanitize_text_field($input['brevo_api_key'] ?? '');
+        $clean['brevo_endpoint']     = esc_url_raw($input['brevo_endpoint'] ?? 'https://api.brevo.com/v3/events');
+        $clean['inspector_sample_rate'] = max(1, min(100, (int) ($input['inspector_sample_rate'] ?? 10)));
         $clean['debug_mode']         = !empty($input['debug_mode']);
         return $clean;
     }
@@ -223,6 +349,142 @@ final class Settings {
         exit;
     }
 
+    public function handle_retry_failed(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_retry_failed');
+
+        $retried = 0;
+        if ($this->queue instanceof EventQueueRepository) {
+            $retried = $this->queue->retry_failed(500);
+        }
+
+        wp_redirect(add_query_arg([
+            'page' => 'fp-tracking',
+            'updated' => 'retry_failed',
+            'retried' => $retried,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    public function handle_save_rules(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_save_rules');
+
+        $disabledRaw = isset($_POST['fp_tracking_disabled_events']) ? sanitize_text_field(wp_unslash((string) $_POST['fp_tracking_disabled_events'])) : '';
+        $renamesRaw = isset($_POST['fp_tracking_renames_json']) ? wp_unslash((string) $_POST['fp_tracking_renames_json']) : '{}';
+        $enrichRaw = isset($_POST['fp_tracking_enrich_json']) ? wp_unslash((string) $_POST['fp_tracking_enrich_json']) : '{}';
+        $brevoMapRaw = isset($_POST['fp_tracking_brevo_mapping_json']) ? wp_unslash((string) $_POST['fp_tracking_brevo_mapping_json']) : '{}';
+        $brevoEventsRaw = isset($_POST['fp_tracking_brevo_enabled_events']) ? sanitize_text_field(wp_unslash((string) $_POST['fp_tracking_brevo_enabled_events'])) : '';
+
+        $disabled = array_values(array_filter(array_map(
+            static fn(string $v): string => sanitize_key(trim($v)),
+            explode(',', $disabledRaw)
+        )));
+
+        $renames = json_decode($renamesRaw, true);
+        if (!is_array($renames)) {
+            $renames = [];
+        }
+        $enrich = json_decode($enrichRaw, true);
+        if (!is_array($enrich)) {
+            $enrich = [];
+        }
+        $brevoMapping = json_decode($brevoMapRaw, true);
+        if (!is_array($brevoMapping)) {
+            $brevoMapping = [];
+        }
+
+        $rules = new EventRuleEngine();
+        $rules->save_rules([
+            'disabled_events' => $disabled,
+            'renames' => $renames,
+            'enrich' => $enrich,
+        ]);
+
+        update_option('fp_tracking_brevo_mapping', $brevoMapping);
+        $brevoEvents = array_values(array_filter(array_map(
+            static fn(string $v): string => sanitize_key(trim($v)),
+            explode(',', $brevoEventsRaw)
+        )));
+        update_option('fp_tracking_brevo_enabled_events', $brevoEvents);
+
+        wp_redirect(add_query_arg([
+            'page' => 'fp-tracking',
+            'updated' => 'rules_saved',
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    public function handle_export_mapping(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_export_mapping');
+
+        $manager = new MappingManager();
+        $json = $manager->export_json();
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="fp-tracking-mapping-' . gmdate('Ymd-His') . '.json"');
+        echo $json;
+        exit;
+    }
+
+    public function handle_import_mapping(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_import_mapping');
+
+        $json = isset($_POST['fp_tracking_mapping_json']) ? wp_unslash((string) $_POST['fp_tracking_mapping_json']) : '';
+        $ok = false;
+        if ($json !== '') {
+            $manager = new MappingManager();
+            $ok = $manager->import_json($json);
+        }
+
+        wp_redirect(add_query_arg([
+            'page' => 'fp-tracking',
+            'updated' => $ok ? 'mapping_imported' : 'mapping_import_failed',
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    /**
+     * Exports the Catalog Health report as JSON for QA/release checks.
+     */
+    public function handle_export_catalog_health(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_export_catalog_health');
+
+        $report = $this->build_catalog_health();
+        $payload = [
+            'generated_at' => gmdate('c'),
+            'plugin_version' => defined('FP_TRACKING_VERSION') ? FP_TRACKING_VERSION : '',
+            'catalog_fingerprint_sha256' => $this->build_catalog_fingerprint(),
+            'site' => [
+                'url' => get_bloginfo('url'),
+                'name' => get_bloginfo('name'),
+            ],
+            'catalog_health' => $report,
+        ];
+        $json = (string) wp_json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $filename = 'fp-tracking-catalog-health-' . gmdate('Ymd-His') . '.json';
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($json));
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        echo $json;
+        exit;
+    }
+
     public function enqueue_assets(string $hook): void {
         if ($hook !== 'toplevel_page_fp-tracking') {
             return;
@@ -242,8 +504,36 @@ final class Settings {
         $gtm_ok       = !empty($this->get('gtm_id'));
         $ga4_ok       = !empty($this->get('ga4_measurement_id')) && !empty($this->get('ga4_api_secret'));
         $meta_ok      = !empty($this->get('meta_pixel_id')) && !empty($this->get('meta_access_token'));
+        $brevo_ok     = !empty($this->get('brevo_enabled')) && !empty($this->get('brevo_api_key'));
         $ads_ok       = !empty($this->get('google_ads_id'));
         $integrations = apply_filters('fp_tracking_registered_integrations', []);
+        $validator    = new EventValidator();
+        $warnings     = $validator->get_recent_warnings(10);
+        $inspector    = new EventInspector();
+        $inspectorEvents = $inspector->recent(10);
+        $ruleEngine   = new EventRuleEngine();
+        $rulesData    = $ruleEngine->get_rules();
+        $consentAudit = new ConsentAuditService();
+        $consentStats = $consentAudit->stats();
+        $brevoMapping = get_option('fp_tracking_brevo_mapping', []);
+        if (!is_array($brevoMapping)) {
+            $brevoMapping = [];
+        }
+        $brevoEnabledEvents = get_option('fp_tracking_brevo_enabled_events', []);
+        if (!is_array($brevoEnabledEvents)) {
+            $brevoEnabledEvents = [];
+        }
+        $queue_stats  = $this->healthService instanceof EventHealthService ? $this->healthService->get_queue_stats() : [
+            'pending' => 0,
+            'processing' => 0,
+            'failed' => 0,
+            'dead' => 0,
+            'sent_24h' => 0,
+            'failed_24h' => 0,
+            'sent_7d' => 0,
+            'failed_7d' => 0,
+        ];
+        $catalogHealth = $this->build_catalog_health();
         ?>
         <div class="wrap fptracking-admin-page">
 
@@ -270,6 +560,9 @@ final class Settings {
                 <span class="fptracking-status-pill <?php echo $meta_ok ? 'is-active' : 'is-missing'; ?>">
                     <span class="dot"></span> Meta CAPI <?php echo $meta_ok ? esc_html__('Attivo', 'fp-tracking') : esc_html__('Credenziali mancanti', 'fp-tracking'); ?>
                 </span>
+                <span class="fptracking-status-pill <?php echo $brevo_ok ? 'is-active' : 'is-missing'; ?>">
+                    <span class="dot"></span> Brevo <?php echo $brevo_ok ? esc_html__('Attivo', 'fp-tracking') : esc_html__('Non configurato', 'fp-tracking'); ?>
+                </span>
                 <span class="fptracking-status-pill <?php echo $ads_ok ? 'is-active' : 'is-missing'; ?>">
                     <span class="dot"></span> Google Ads <?php echo $ads_ok ? esc_html__('Configurato', 'fp-tracking') : esc_html__('Non configurato', 'fp-tracking'); ?>
                 </span>
@@ -288,6 +581,266 @@ final class Settings {
                 <?php esc_html_e('Conversion labels salvati correttamente.', 'fp-tracking'); ?>
             </div>
             <?php endif; ?>
+            <?php if (isset($_GET['updated']) && $_GET['updated'] === 'retry_failed'): ?>
+            <div class="fptracking-alert fptracking-alert-success">
+                <span class="dashicons dashicons-yes-alt"></span>
+                <?php printf(esc_html__('%d eventi falliti rimessi in coda.', 'fp-tracking'), (int) ($_GET['retried'] ?? 0)); ?>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($_GET['updated']) && $_GET['updated'] === 'rules_saved'): ?>
+            <div class="fptracking-alert fptracking-alert-success">
+                <span class="dashicons dashicons-yes-alt"></span>
+                <?php esc_html_e('Regole eventi e mapping Brevo salvati.', 'fp-tracking'); ?>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($_GET['updated']) && $_GET['updated'] === 'mapping_imported'): ?>
+            <div class="fptracking-alert fptracking-alert-success">
+                <span class="dashicons dashicons-yes-alt"></span>
+                <?php esc_html_e('Configurazione mapping importata correttamente.', 'fp-tracking'); ?>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($_GET['updated']) && $_GET['updated'] === 'mapping_import_failed'): ?>
+            <div class="fptracking-alert fptracking-alert-warning">
+                <span class="dashicons dashicons-warning"></span>
+                <?php esc_html_e('Import mapping non riuscito: JSON non valido.', 'fp-tracking'); ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-analytics"></span>
+                        <h2><?php esc_html_e('Catalog Health', 'fp-tracking'); ?></h2>
+                    </div>
+                    <?php if (!empty($catalogHealth['healthy'])): ?>
+                        <span class="fptracking-badge fptracking-badge-success">&#10003; <?php esc_html_e('Coerente', 'fp-tracking'); ?></span>
+                    <?php else: ?>
+                        <span class="fptracking-badge fptracking-badge-warning"><?php esc_html_e('Con anomalie', 'fp-tracking'); ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Controllo automatico di coerenza tra catalogo eventi, mapping Meta, set server-side e required fields.', 'fp-tracking'); ?></p>
+                    <div class="fptracking-status-bar">
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span>
+                            <?php printf(esc_html__('Eventi: %d', 'fp-tracking'), (int) ($catalogHealth['events_count'] ?? 0)); ?>
+                        </span>
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span>
+                            <?php printf(esc_html__('Meta map: %d', 'fp-tracking'), (int) ($catalogHealth['meta_map_count'] ?? 0)); ?>
+                        </span>
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span>
+                            <?php printf(esc_html__('Server-side: %d', 'fp-tracking'), (int) ($catalogHealth['server_side_count'] ?? 0)); ?>
+                        </span>
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span>
+                            <?php printf(esc_html__('Required rules: %d', 'fp-tracking'), (int) ($catalogHealth['required_rules_count'] ?? 0)); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo empty($catalogHealth['healthy']) ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span>
+                            <?php printf(esc_html__('Anomalie: %d', 'fp-tracking'), count((array) ($catalogHealth['issues'] ?? []))); ?>
+                        </span>
+                    </div>
+
+                    <?php if (empty($catalogHealth['issues'])): ?>
+                        <div class="fptracking-alert fptracking-alert-success">
+                            <span class="dashicons dashicons-yes-alt"></span>
+                            <?php esc_html_e('Nessuna anomalia rilevata nel catalogo eventi.', 'fp-tracking'); ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="fptracking-alert fptracking-alert-warning">
+                            <span class="dashicons dashicons-warning"></span>
+                            <?php esc_html_e('Sono state rilevate incoerenze nel catalogo. Verifica e correggi prima del rilascio.', 'fp-tracking'); ?>
+                        </div>
+                        <table class="fptracking-table">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Dettaglio anomalia', 'fp-tracking'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ((array) $catalogHealth['issues'] as $issue): ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) $issue); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
+                        <input type="hidden" name="action" value="fp_tracking_export_catalog_health">
+                        <?php wp_nonce_field('fp_tracking_export_catalog_health'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                            <span class="dashicons dashicons-download"></span>
+                            <?php esc_html_e('Esporta Catalog Health JSON', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-database-view"></span>
+                        <h2><?php esc_html_e('Queue Health (Server-Side)', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <div class="fptracking-status-bar">
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['pending'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Pending: %d', 'fp-tracking'), (int) $queue_stats['pending']); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['processing'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Processing: %d', 'fp-tracking'), (int) $queue_stats['processing']); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['failed'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Failed: %d', 'fp-tracking'), (int) $queue_stats['failed']); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['dead'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Dead: %d', 'fp-tracking'), (int) $queue_stats['dead']); ?>
+                        </span>
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span> <?php printf(esc_html__('Sent 24h: %d', 'fp-tracking'), (int) $queue_stats['sent_24h']); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['failed_24h'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Failed 24h: %d', 'fp-tracking'), (int) $queue_stats['failed_24h']); ?>
+                        </span>
+                        <span class="fptracking-status-pill is-active">
+                            <span class="dot"></span> <?php printf(esc_html__('Sent 7d: %d', 'fp-tracking'), (int) $queue_stats['sent_7d']); ?>
+                        </span>
+                        <span class="fptracking-status-pill <?php echo (int) $queue_stats['failed_7d'] > 0 ? 'is-missing' : 'is-active'; ?>">
+                            <span class="dot"></span> <?php printf(esc_html__('Failed 7d: %d', 'fp-tracking'), (int) $queue_stats['failed_7d']); ?>
+                        </span>
+                    </div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="fp_tracking_retry_failed">
+                        <?php wp_nonce_field('fp_tracking_retry_failed'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                            <span class="dashicons dashicons-update"></span>
+                            <?php esc_html_e('Rimetti in coda eventi falliti/dead', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-filter"></span>
+                        <h2><?php esc_html_e('Rule Engine + Brevo Mapping', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="fp_tracking_save_rules">
+                        <?php wp_nonce_field('fp_tracking_save_rules'); ?>
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Disabilita eventi (CSV)', 'fp-tracking'); ?></label>
+                                <input type="text" name="fp_tracking_disabled_events" value="<?php echo esc_attr(implode(',', (array) ($rulesData['disabled_events'] ?? []))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
+                                <span class="fptracking-hint"><?php esc_html_e('Elenco eventi da bloccare prima del dispatch.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Rename eventi (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_renames_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['renames'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Esempio: {"generate_lead":"lead_submit"}', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Enrich payload globale (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_enrich_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['enrich'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Chiavi aggiunte automaticamente a ogni evento.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Brevo mapping eventi (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_brevo_mapping_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode($brevoMapping, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Mappa evento FP -> evento Brevo.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Eventi Brevo abilitati (CSV)', 'fp-tracking'); ?></label>
+                                <input type="text" name="fp_tracking_brevo_enabled_events" value="<?php echo esc_attr(implode(',', array_map('strval', $brevoEnabledEvents))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
+                                <span class="fptracking-hint"><?php esc_html_e('Vuoto = tutti gli eventi.', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                        <div class="fptracking-actions-top-gap-sm">
+                            <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                                <span class="dashicons dashicons-saved"></span>
+                                <?php esc_html_e('Salva regole e mapping', 'fp-tracking'); ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-search"></span>
+                        <h2><?php esc_html_e('Validator + Event Inspector', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Warning recenti di validazione e campione eventi normalizzati (PII mascherata).', 'fp-tracking'); ?></p>
+                    <?php if ($warnings === []): ?>
+                        <p><?php esc_html_e('Nessun warning recente.', 'fp-tracking'); ?></p>
+                    <?php else: ?>
+                        <table class="fptracking-table">
+                            <thead><tr><th><?php esc_html_e('Quando', 'fp-tracking'); ?></th><th><?php esc_html_e('Evento', 'fp-tracking'); ?></th><th><?php esc_html_e('Warning', 'fp-tracking'); ?></th></tr></thead>
+                            <tbody>
+                            <?php foreach ($warnings as $w): ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) ($w['timestamp'] ?? '')); ?></td>
+                                    <td><code><?php echo esc_html((string) ($w['event'] ?? '')); ?></code></td>
+                                    <td><?php echo esc_html(implode(' | ', array_map('strval', (array) ($w['warnings'] ?? [])))); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                    <?php if ($inspectorEvents !== []): ?>
+                        <p class="fptracking-section-title"><?php esc_html_e('Ultimi eventi campionati', 'fp-tracking'); ?></p>
+                        <textarea class="large-text code" rows="8" readonly><?php echo esc_textarea((string) wp_json_encode($inspectorEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-shield-alt"></span>
+                        <h2><?php esc_html_e('Consent Audit + Mapping Export/Import', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Statistiche aggregate consenso e gestione configurazione mapping.', 'fp-tracking'); ?></p>
+                    <div class="fptracking-status-bar">
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Consent updates: %d', 'fp-tracking'), (int) ($consentStats['total_updates'] ?? 0)); ?></span>
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last revision: %d', 'fp-tracking'), (int) ($consentStats['last_revision'] ?? 0)); ?></span>
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last update: %s', 'fp-tracking'), esc_html((string) ($consentStats['last_update_at'] ?? '-'))); ?></span>
+                    </div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
+                        <input type="hidden" name="action" value="fp_tracking_export_mapping">
+                        <?php wp_nonce_field('fp_tracking_export_mapping'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                            <span class="dashicons dashicons-download"></span>
+                            <?php esc_html_e('Esporta mapping/config JSON', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
+                        <input type="hidden" name="action" value="fp_tracking_import_mapping">
+                        <?php wp_nonce_field('fp_tracking_import_mapping'); ?>
+                        <label for="fp-tracking-import-json"><strong><?php esc_html_e('Importa mapping/config JSON', 'fp-tracking'); ?></strong></label>
+                        <textarea id="fp-tracking-import-json" name="fp_tracking_mapping_json" rows="7" class="large-text code" placeholder="{...}"></textarea>
+                        <div class="fptracking-actions-top-gap-xs">
+                            <button type="submit" class="fptracking-btn fptracking-btn-primary">
+                                <span class="dashicons dashicons-upload"></span>
+                                <?php esc_html_e('Importa JSON', 'fp-tracking'); ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <!-- ══ FORM IMPOSTAZIONI ══════════════════════════════════════ -->
             <form method="post" action="options.php">
@@ -332,7 +885,7 @@ final class Settings {
                         <?php endif; ?>
                     </div>
                     <div class="fptracking-card-body">
-                        <p class="description"><?php esc_html_e('Il Measurement Protocol invia gli eventi di conversione direttamente a GA4 lato server, come backup al tag GTM client-side.', 'fp-tracking'); ?></p>
+                    <p class="description"><?php esc_html_e('Gli eventi browser passano sempre da dataLayer -> GTM (client-side). Inserendo il GA4 Measurement ID, il JSON GTM esportato viene popolato automaticamente con quell\'ID. L\'API Secret serve solo per il canale server-side (Measurement Protocol).', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('GA4 Measurement ID', 'fp-tracking'); ?></label>
@@ -362,7 +915,7 @@ final class Settings {
                         <?php endif; ?>
                     </div>
                     <div class="fptracking-card-body">
-                        <p class="description"><?php esc_html_e('Il Pixel viene iniettato via GTM (client-side). Il CAPI invia gli stessi eventi da server per recuperare le conversioni perse da iOS/ad-blocker. La deduplicazione è automatica via event_id.', 'fp-tracking'); ?></p>
+                    <p class="description"><?php esc_html_e('Gli eventi Meta lato browser passano da GTM (client-side). Inserendo il Meta Pixel ID, il JSON GTM esportato viene popolato automaticamente con quel Pixel. L\'Access Token serve solo per il canale server-side (CAPI). La deduplicazione usa event_id.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Meta Pixel ID', 'fp-tracking'); ?></label>
@@ -411,7 +964,7 @@ final class Settings {
                         </div>
                     </div>
                     <div class="fptracking-card-body">
-                        <div class="fptracking-fields-grid" style="margin-bottom:24px">
+                        <div class="fptracking-fields-grid fptracking-fields-grid-bottom-gap">
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Durata cookie UTM (giorni)', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('utm_cookie_days', 'number', '90', []); ?>
@@ -447,6 +1000,30 @@ final class Settings {
                         </div>
                         <div class="fptracking-toggle-row">
                             <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('Brevo Server-Side', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Invia eventi a Brevo Events API v3 (`/v3/events`) usando `api-key` e payload ufficiale (event_name, identifiers, event_properties).', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('brevo_enabled', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="fptracking-fields-grid fptracking-fields-grid-top-gap">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Brevo API Key', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_api_key', 'password', '', []); ?>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Brevo Endpoint', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_endpoint', 'text', 'https://api.brevo.com/v3/events', []); ?>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Inspector Sample Rate (%)', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('inspector_sample_rate', 'number', '10', []); ?>
+                            </div>
+                        </div>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
                                 <strong><?php esc_html_e('Debug Mode', 'fp-tracking'); ?></strong>
                                 <span><?php esc_html_e('Mostra console.log per ogni evento dataLayer e usa l\'endpoint debug di GA4 MP. Da disattivare in produzione.', 'fp-tracking'); ?></span>
                             </div>
@@ -456,7 +1033,7 @@ final class Settings {
                             </label>
                         </div>
 
-                        <div style="margin-top:24px">
+                        <div class="fptracking-actions-top-gap-lg">
                             <button type="submit" class="fptracking-btn fptracking-btn-primary">
                                 <span class="dashicons dashicons-saved"></span>
                                 <?php esc_html_e('Salva Impostazioni', 'fp-tracking'); ?>
@@ -492,11 +1069,11 @@ final class Settings {
                         <table class="fptracking-table">
                             <thead>
                                 <tr>
-                                    <th style="width:36px"></th>
+                                    <th class="fptracking-col-icon"></th>
                                     <th><?php esc_html_e('Evento', 'fp-tracking'); ?></th>
                                     <th><?php esc_html_e('Nome evento FP', 'fp-tracking'); ?></th>
                                     <th><?php esc_html_e('Conversion Label', 'fp-tracking'); ?></th>
-                                    <th style="width:110px"><?php esc_html_e('Stato', 'fp-tracking'); ?></th>
+                                    <th class="fptracking-col-status"><?php esc_html_e('Stato', 'fp-tracking'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -505,11 +1082,11 @@ final class Settings {
                                 $has_label   = $saved_label !== '';
                             ?>
                                 <tr class="<?php echo $has_label ? 'is-configured' : ''; ?>">
-                                    <td style="text-align:center;font-size:16px;padding:10px 8px">
+                                    <td class="fptracking-cell-icon">
                                         <?php if ($has_label): ?>
-                                            <span class="dashicons dashicons-yes-alt" style="color:#10b981"></span>
+                                            <span class="dashicons dashicons-yes-alt fptracking-icon-success"></span>
                                         <?php else: ?>
-                                            <span class="dashicons dashicons-minus" style="color:#d1d5db"></span>
+                                            <span class="dashicons dashicons-minus fptracking-icon-muted"></span>
                                         <?php endif; ?>
                                     </td>
                                     <td><strong><?php echo esc_html($event_label); ?></strong></td>
@@ -556,7 +1133,7 @@ final class Settings {
                     </div>
                 </div>
                 <div class="fptracking-card-body">
-                    <p class="description"><?php esc_html_e('Scarica il container GTM pronto all\'importazione con tutti i tag, trigger e variabili pre-configurati per questo sito. Importalo in GTM → Admin → Import Container.', 'fp-tracking'); ?></p>
+                    <p class="description"><?php esc_html_e('Scarica il container GTM pronto all\'importazione con tag, trigger e variabili pre-configurati. Se hai inserito GA4 Measurement ID e/o Meta Pixel ID nelle impostazioni, il JSON viene generato con quei valori. Gli eventi client-side avvengono nel browser tramite dataLayer + GTM.', 'fp-tracking'); ?></p>
 
                     <ul class="fptracking-export-checklist">
                         <li><span class="dashicons dashicons-yes"></span> <?php esc_html_e('Tag GA4 Configuration (All Pages)', 'fp-tracking'); ?></li>
@@ -571,7 +1148,7 @@ final class Settings {
                     </ul>
 
                     <?php if ($labels_count < $total_ads): ?>
-                    <div class="fptracking-alert fptracking-alert-warning" style="margin-bottom:16px">
+                    <div class="fptracking-alert fptracking-alert-warning fptracking-alert-bottom-gap">
                         <span class="dashicons dashicons-warning"></span>
                         <?php if ($labels_count === 0): ?>
                             <?php esc_html_e('Nessun Conversion Label Google Ads configurato. I tag Ads nel JSON avranno il campo label vuoto — configurali nella sezione sopra prima di esportare.', 'fp-tracking'); ?>
@@ -584,7 +1161,7 @@ final class Settings {
                         <?php endif; ?>
                     </div>
                     <?php else: ?>
-                    <div class="fptracking-alert fptracking-alert-success" style="margin-bottom:16px">
+                    <div class="fptracking-alert fptracking-alert-success fptracking-alert-bottom-gap">
                         <span class="dashicons dashicons-yes-alt"></span>
                         <?php esc_html_e('Tutti i Conversion Label sono configurati — il container è pronto per l\'esportazione.', 'fp-tracking'); ?>
                     </div>
@@ -614,7 +1191,7 @@ final class Settings {
                 </div>
                 <div class="fptracking-card-body">
                     <?php if (empty($integrations)): ?>
-                        <p style="color:var(--fpdms-text-muted);font-size:13px;margin:0"><?php esc_html_e('Nessuna integrazione registrata. Attiva i plugin FP (Forms, Restaurant, Experiences, CTA Bar, Bio) per vederle comparire qui.', 'fp-tracking'); ?></p>
+                        <p class="fptracking-empty-state"><?php esc_html_e('Nessuna integrazione registrata. Attiva i plugin FP (Forms, Restaurant, Experiences, CTA Bar, Bio) per vederle comparire qui.', 'fp-tracking'); ?></p>
                     <?php else: ?>
                         <div class="fptracking-integrations-grid">
                             <?php foreach ($integrations as $name => $active): ?>

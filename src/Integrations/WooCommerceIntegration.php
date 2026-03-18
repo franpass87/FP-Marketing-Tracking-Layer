@@ -14,11 +14,8 @@ use FPTracking\Admin\Settings;
  *   view_item_list   — archive / shop / category pages
  *   view_item        — single product page
  *   add_to_cart      — when product added to cart
- *   remove_from_cart — when product removed from cart
  *   view_cart        — cart page
  *   begin_checkout   — checkout page load
- *   add_payment_info — payment step
- *   add_shipping_info— shipping step
  *   purchase         — thank you page (order received)
  *   refund           — when order is refunded (admin)
  */

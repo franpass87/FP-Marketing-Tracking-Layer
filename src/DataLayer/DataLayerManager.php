@@ -3,6 +3,10 @@
 namespace FPTracking\DataLayer;
 
 use FPTracking\Admin\Settings;
+use FPTracking\Catalog\EventCatalog;
+use FPTracking\Inspector\EventInspector;
+use FPTracking\Rules\EventRuleEngine;
+use FPTracking\Validation\EventValidator;
 
 final class DataLayerManager {
 
@@ -10,9 +14,15 @@ final class DataLayerManager {
     private array $queue = [];
 
     private EventSchema $schema;
+    private EventRuleEngine $ruleEngine;
+    private EventValidator $validator;
+    private EventInspector $inspector;
 
     public function __construct(private readonly Settings $settings) {
         $this->schema = new EventSchema();
+        $this->ruleEngine = new EventRuleEngine();
+        $this->validator = new EventValidator();
+        $this->inspector = new EventInspector();
     }
 
     /**
@@ -24,6 +34,13 @@ final class DataLayerManager {
      * @param array  $params
      */
     public function queue_event(string $event_name, array $params = []): void {
+        $ruleResult = $this->ruleEngine->apply($event_name, $params);
+        if ($ruleResult['drop']) {
+            return;
+        }
+        $event_name = $ruleResult['event_name'];
+        $params = $ruleResult['params'];
+
         // Ensure event_id exists before building the payload.
         // The same ID is used for both the dataLayer push (→ GTM → fbq eventID)
         // and the server-side dispatch (→ Meta CAPI event_id), enabling deduplication.
@@ -32,6 +49,9 @@ final class DataLayerManager {
         }
 
         $event = $this->schema->build($event_name, $params);
+        $warnings = $this->validator->validate($event_name, $event);
+        $sampleRate = (int) $this->settings->get('inspector_sample_rate', 10);
+        $this->inspector->record($event_name, $event, $warnings, $sampleRate);
         $this->queue[] = $event;
 
         // Trigger server-side dispatch (GA4 MP + Meta CAPI) for conversion events
@@ -91,29 +111,7 @@ final class DataLayerManager {
     }
 
     private function is_server_side_event(string $event_name): bool {
-        // Must stay in sync with ServerSideDispatcher::META_EVENT_MAP + GA4-only high-value events.
-        // All events here are dispatched to GA4 MP; those in META_EVENT_MAP also go to Meta CAPI.
-        $server_side_events = [
-            // WooCommerce
-            'purchase',
-            'add_to_cart',
-            'begin_checkout',
-            // FP-Restaurant
-            'booking_confirmed',
-            'booking_submitted',
-            'booking_payment_completed',
-            'event_ticket_purchase',
-            // FP-Forms
-            'generate_lead',
-            'form_payment_started',
-            // FP-Experiences
-            'experience_checkout_started',
-            'experience_paid',
-            'rtb_submitted',
-            'rtb_approved',
-            'gift_purchased'
-        ];
-        return in_array($event_name, $server_side_events, true)
+        return in_array($event_name, EventCatalog::SERVER_SIDE_EVENTS, true)
             && apply_filters('fp_tracking_server_side_enabled', true, $event_name);
     }
 }

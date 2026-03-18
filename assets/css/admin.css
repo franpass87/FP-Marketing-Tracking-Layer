@@ -232,6 +232,12 @@ body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
     line-height: 1.6;
 }
 
+.fptracking-empty-state {
+    color: var(--fpdms-text-muted);
+    font-size: 13px;
+    margin: 0;
+}
+
 /* ============================================================
    FORM FIELDS (dentro le card)
    ============================================================ */
@@ -452,6 +458,10 @@ body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
     border-left: 4px solid var(--fpdms-info);
 }
 
+.fptracking-alert-bottom-gap {
+    margin-bottom: 16px;
+}
+
 /* ============================================================
    TABLE (Google Ads labels + Integrazioni)
    ============================================================ */
@@ -480,6 +490,14 @@ body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
     text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
+.fptracking-col-icon {
+    width: 36px;
+}
+
+.fptracking-col-status {
+    width: 110px;
+}
+
 .fptracking-table tbody tr {
     background: var(--fpdms-bg-white);
     transition: var(--transition);
@@ -503,6 +521,20 @@ body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
     font-size: 13px;
     color: var(--fpdms-text);
     vertical-align: middle;
+}
+
+.fptracking-cell-icon {
+    text-align: center;
+    font-size: 16px;
+    padding: 10px 8px;
+}
+
+.fptracking-icon-success {
+    color: var(--fpdms-success);
+}
+
+.fptracking-icon-muted {
+    color: #d1d5db;
 }
 
 .fptracking-table tbody tr:last-child td {
@@ -604,6 +636,30 @@ body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
     font-size: 16px;
     width: 16px;
     height: 16px;
+}
+
+.fptracking-form-top-gap {
+    margin-top: 16px;
+}
+
+.fptracking-actions-top-gap-xs {
+    margin-top: 8px;
+}
+
+.fptracking-actions-top-gap-sm {
+    margin-top: 12px;
+}
+
+.fptracking-actions-top-gap-lg {
+    margin-top: 24px;
+}
+
+.fptracking-fields-grid-bottom-gap {
+    margin-bottom: 24px;
+}
+
+.fptracking-fields-grid-top-gap {
+    margin-top: 12px;
 }
 
 /* ============================================================
