@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -138,6 +138,54 @@ do_action('fp_tracking_event', 'purchase', [
 2. `DataLayerManager` normalizza il payload e lo accoda.
 3. Nel browser, gli eventi vengono pushati su `window.dataLayer` e gestiti da GTM (client-side).
 4. Se evento/idoneo e canale attivo, parte anche il dispatch server-side verso GA4 MP e/o Meta CAPI.
+
+### Catalogo eventi centralizzato (v1.2.0+)
+Il plugin usa un catalogo unico in `src/Catalog/EventCatalog.php` come sorgente di verità per:
+
+- eventi supportati in export GTM (`EVENTS`)
+- mapping eventi Meta (`META_EVENT_MAP`)
+- eventi abilitati al dispatch server-side (`SERVER_SIDE_EVENTS`)
+- campi obbligatori per validazione (`REQUIRED_FIELDS`)
+
+Questo riduce divergenze tra `GTMExporter`, `ServerSideDispatcher`, `DataLayerManager` e `EventValidator`.
+
+### Catalog Health (admin)
+In **Impostazioni -> FP Tracking** è disponibile la card **Catalog Health** che controlla automaticamente:
+
+- coerenza tra catalogo eventi e mapping Meta
+- coerenza tra catalogo eventi e lista server-side
+- coerenza tra catalogo eventi e required fields
+- presenza di definizioni non valide (label/type/campi)
+
+La card include anche export JSON (`Esporta Catalog Health JSON`) con:
+
+- timestamp generazione
+- versione plugin
+- stato `healthy` e lista issue
+- fingerprint catalogo `catalog_fingerprint_sha256`
+
+Il fingerprint è utile per confrontare rapidamente staging/prod: se hash uguale, la configurazione catalogo è identica.
+
+### Integrazione FP-Discount-Gift
+Gli eventi emessi da `FP-Discount-Gift` sono supportati end-to-end nel layer:
+
+| Evento | GTM/GA4 | Server-Side | Meta |
+|---|---|---|---|
+| `discount_applied` | Si | Si | No (default) |
+| `discount_code_attempted` | Si | Si | No (default) |
+| `discount_code_rejected` | Si | Si | No (default) |
+| `discount_removed` | Si | Si | No (default) |
+| `gift_voucher_purchased` | Si | Si | Si (`Purchase`) |
+| `gift_voucher_redeemed` | Si | Si | No (default) |
+
+> Nota: i mapping Meta non standard sono volontariamente conservativi. Per casi custom usa Rule Engine + mapping dedicato.
+
+### Checklist QA consigliata (release)
+1. Verifica card **Catalog Health**: stato `Coerente`, `Anomalie: 0`.
+2. Esporta JSON Catalog Health e salva il fingerprint SHA256.
+3. Triggera 2-3 eventi reali (`discount_applied`, `gift_voucher_purchased`, `generate_lead`).
+4. Verifica coda (`pending -> sent`) e assenza warning validator.
+5. Esporta container GTM e valida trigger/tag in preview mode.
 
 ### Consent Mode v2
 Il plugin gestisce automaticamente i consensi. Prima che l'utente esprima preferenze, tutti i tag GTM sono in stato `denied`. Dopo il consenso tramite FP Privacy and Cookie Policy, il Bridge aggiorna lo stato:

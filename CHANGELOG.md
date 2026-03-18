@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.1] - 2026-03-18
+### Changed
+- Documentazione tecnica ampliata in `README.md` con sezioni su catalogo eventi centralizzato, Catalog Health, integrazione FP-Discount-Gift e checklist QA release.
+- Aggiunta guida operativa dedicata `docs-catalog-health.md` con uso del fingerprint SHA256 e flusso pre-release.
+
 ## [1.2.0] - 2026-03-18
 ### Added
 - Integrazione end-to-end eventi `FP-Discount-Gift` nel tracking layer (`discount_*`, `gift_voucher_*`) con supporto GTM/GA4 e coda server-side.
