@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.4] - 2026-03-19
+### Changed
+- Bridge `fpCtaBarClick` (FP-CTA-Bar): aggiunto parametro `cta_category` nel payload verso `dataLayer` (da `detail.category` / campo categoria admin).
+
 ## [1.2.3] - 2025-03-19
 ### Fixed
 - Admin: `h1.screen-reader-text` come primo heading nel `.wrap` e titolo visibile nel banner come `h2` (compat notice iniettate in JS con `.wrap h1`); regole CSS su `.notice` figlie dirette del `.wrap`.
