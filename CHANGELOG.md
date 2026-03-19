@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.3] - 2025-03-19
+### Fixed
+- Admin: `h1.screen-reader-text` come primo heading nel `.wrap` e titolo visibile nel banner come `h2` (compat notice iniettate in JS con `.wrap h1`); regole CSS su `.notice` figlie dirette del `.wrap`.
+
 ## [1.2.2] - 2025-03-19
 ### Fixed
 - Admin CSS: rimosso flex/`order` su `#wpbody-content` che spostava le notice WordPress sotto la pagina; allineato a `fp-admin-ui-design-system.mdc`.

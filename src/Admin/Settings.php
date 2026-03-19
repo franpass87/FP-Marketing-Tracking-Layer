@@ -536,14 +536,16 @@ final class Settings {
         $catalogHealth = $this->build_catalog_health();
         ?>
         <div class="wrap fptracking-admin-page">
+            <?php /* h1 primo nel .wrap: compat notice JS (jQuery('.wrap h1').after). Titolo visibile = h2 nel banner. */ ?>
+            <h1 class="screen-reader-text"><?php esc_html_e('FP Marketing Tracking Layer', 'fp-tracking'); ?></h1>
 
             <!-- ══ PAGE HEADER ══════════════════════════════════════════ -->
             <div class="fptracking-page-header">
                 <div class="fptracking-page-header-content">
-                    <h1>
+                    <h2 class="fptracking-page-header-title" aria-hidden="true">
                         <span class="dashicons dashicons-chart-line"></span>
                         <?php esc_html_e('FP Marketing Tracking Layer', 'fp-tracking'); ?>
-                    </h1>
+                    </h2>
                     <p><?php esc_html_e('Centralizza tutto il tracking: GTM, GA4, Google Ads, Meta Pixel e server-side CAPI. Tutti i plugin FP instradano gli eventi attraverso questo layer.', 'fp-tracking'); ?></p>
                 </div>
                 <span class="fptracking-page-header-badge">v<?php echo esc_html(FP_TRACKING_VERSION); ?></span>

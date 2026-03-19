@@ -84,7 +84,7 @@ body.toplevel_page_fp-tracking #wpbody-content > .wrap.fptracking-admin-page {
     gap: 16px;
 }
 
-.fptracking-page-header-content h1 {
+.fptracking-page-header-content .fptracking-page-header-title {
     font-size: 26px;
     font-weight: 700;
     margin: 0 0 6px;
@@ -95,10 +95,19 @@ body.toplevel_page_fp-tracking #wpbody-content > .wrap.fptracking-admin-page {
     gap: 10px;
 }
 
-.fptracking-page-header-content h1 .dashicons {
+.fptracking-page-header-content .fptracking-page-header-title .dashicons {
     font-size: 28px;
     width: 28px;
     height: 28px;
+}
+
+.wrap.fptracking-admin-page > .notice,
+.wrap.fptracking-admin-page > div.updated,
+.wrap.fptracking-admin-page > div.error {
+    float: none;
+    clear: both;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .fptracking-page-header-content p {
