@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.2] - 2025-03-19
+### Fixed
+- Admin CSS: rimosso flex/`order` su `#wpbody-content` che spostava le notice WordPress sotto la pagina; allineato a `fp-admin-ui-design-system.mdc`.
+
 ## [1.2.1] - 2026-03-18
 ### Changed
 - Documentazione tecnica ampliata in `README.md` con sezioni su catalogo eventi centralizzato, Catalog Health, integrazione FP-Discount-Gift e checklist QA release.

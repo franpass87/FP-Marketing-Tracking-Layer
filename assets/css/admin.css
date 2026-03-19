@@ -56,19 +56,9 @@
    PAGE WRAPPER
    ============================================================ */
 
-/* Evita sovrapposizione notice WordPress: header sempre in cima, notice sotto */
-body.toplevel_page_fp-tracking #wpbody-content {
-    display: flex;
-    flex-direction: column;
-}
+/* Notice admin: niente flex+order su #wpbody-content (fp-admin-ui-design-system.mdc) */
 body.toplevel_page_fp-tracking #wpbody-content > .wrap.fptracking-admin-page {
-    order: 1;
-}
-body.toplevel_page_fp-tracking #wpbody-content > .notice,
-body.toplevel_page_fp-tracking #wpbody-content > .updated,
-body.toplevel_page_fp-tracking #wpbody-content > .settings-error {
-    order: 2;
-    margin: 0 20px 20px;
+    margin-top: 12px;
 }
 
 .wrap.fptracking-admin-page {
