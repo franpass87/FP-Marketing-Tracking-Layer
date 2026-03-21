@@ -608,6 +608,19 @@ final class Settings {
             </div>
             <?php endif; ?>
 
+            <!-- ══ NAV RAPIDA SEZIONI ═══════════════════════════════════ -->
+            <nav class="fptracking-nav-sections" aria-label="<?php esc_attr_e('Navigazione rapida', 'fp-tracking'); ?>">
+                <a href="#fptracking-heading-monitoraggio"><?php esc_html_e('Monitoraggio', 'fp-tracking'); ?></a>
+                <span class="fptracking-nav-sep">|</span>
+                <a href="#fptracking-heading-configurazione"><?php esc_html_e('Configurazione', 'fp-tracking'); ?></a>
+                <span class="fptracking-nav-sep">|</span>
+                <a href="#fptracking-heading-export"><?php esc_html_e('Export', 'fp-tracking'); ?></a>
+                <span class="fptracking-nav-sep">|</span>
+                <a href="#fptracking-heading-regole"><?php esc_html_e('Regole', 'fp-tracking'); ?></a>
+                <span class="fptracking-nav-sep">|</span>
+                <a href="#fptracking-heading-integrazioni"><?php esc_html_e('Integrazioni', 'fp-tracking'); ?></a>
+            </nav>
+
             <!-- ══ SEZIONE: Monitoraggio ═══════════════════════════════════ -->
             <section class="fptracking-section" aria-labelledby="fptracking-heading-monitoraggio">
                 <h2 id="fptracking-heading-monitoraggio" class="fptracking-section-header">
@@ -1093,6 +1106,7 @@ final class Settings {
                     <?php esc_html_e('Regole, debug e mapping', 'fp-tracking'); ?>
                 </h2>
 
+                <div class="fptracking-cards-grid">
             <div class="fptracking-card">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
@@ -1151,7 +1165,10 @@ final class Settings {
                 <div class="fptracking-card-body">
                     <p class="description"><?php esc_html_e('Warning recenti di validazione e campione eventi normalizzati (PII mascherata).', 'fp-tracking'); ?></p>
                     <?php if ($warnings === []): ?>
-                        <p><?php esc_html_e('Nessun warning recente.', 'fp-tracking'); ?></p>
+                        <div class="fptracking-empty-ok">
+                            <span class="dashicons dashicons-yes-alt"></span>
+                            <p><?php esc_html_e('Nessun warning di validazione recente. Gli eventi inviati rispettano gli schemi attesi.', 'fp-tracking'); ?></p>
+                        </div>
                     <?php else: ?>
                         <table class="fptracking-table">
                             <thead><tr><th><?php esc_html_e('Quando', 'fp-tracking'); ?></th><th><?php esc_html_e('Evento', 'fp-tracking'); ?></th><th><?php esc_html_e('Warning', 'fp-tracking'); ?></th></tr></thead>
@@ -1172,6 +1189,7 @@ final class Settings {
                     <?php endif; ?>
                 </div>
             </div>
+                </div><!-- .fptracking-cards-grid -->
 
             <div class="fptracking-card">
                 <div class="fptracking-card-header">

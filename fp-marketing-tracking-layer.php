@@ -3,7 +3,7 @@
  * Plugin Name:       FP Marketing Tracking Layer
  * Plugin URI:        https://github.com/franpass87/FP-Marketing-Tracking-Layer
  * Description:       Centralized marketing tracking layer. Injects GTM, manages Consent Mode v2, routes events from all FP plugins to window.dataLayer and dispatches server-side events to GA4 Measurement Protocol and Meta Conversions API.
- * Version:           1.2.5
+ * Version:           1.2.6
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            Francesco Passeri
@@ -14,7 +14,7 @@
 
 defined('ABSPATH') || exit;
 
-define('FP_TRACKING_VERSION', '1.2.5');
+define('FP_TRACKING_VERSION', '1.2.6');
 define('FP_TRACKING_FILE', __FILE__);
 define('FP_TRACKING_DIR', plugin_dir_path(__FILE__));
 define('FP_TRACKING_URL', plugin_dir_url(__FILE__));

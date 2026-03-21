@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.6] - 2026-03-21
+### Changed
+- Admin: nav rapida con jump-to-sezioni, accento laterale viola sugli header, grid 2 colonne per Rule Engine + Validator, empty state migliorato per Validator (nessun warning).
+- Smooth scroll e scroll-margin per link interni; rispetto di prefers-reduced-motion.
+
 ## [1.2.5] - 2026-03-21
 ### Changed
 - Admin: pagina riorganizzata con sezioni gerarchiche (Monitoraggio, Configurazione, Export, Regole/debug, Integrazioni) e grid 2 colonne per Catalog Health + Queue Health.
