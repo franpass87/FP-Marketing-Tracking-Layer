@@ -256,7 +256,7 @@ final class Settings {
         );
     }
 
-    private function render_field(string $key, string $type, string $placeholder, array $options): void {
+    private function render_field(string $key, string $type, string $placeholder, array $options, bool $with_copy = false, string $input_id = ''): void {
         $value = $this->get($key);
         $name  = self::OPTION_KEY . '[' . $key . ']';
 
@@ -270,7 +270,18 @@ final class Settings {
             echo '</select>';
         } else {
             $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id', 'brevo_api_key', 'brevo_endpoint'], true) ? ' is-monospace' : '';
-            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '">';
+            $id_attr = $input_id !== '' ? ' id="' . esc_attr($input_id) . '"' : '';
+
+            if ($with_copy && $input_id !== '') {
+                echo '<span class="fptracking-field-copy-wrap">';
+            }
+            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '"' . $id_attr . ' data-fptracking-copyable>';
+            if ($with_copy && $input_id !== '') {
+                echo '<button type="button" class="fptracking-btn-copy" data-fptracking-copy-for="' . esc_attr($input_id) . '" aria-label="' . esc_attr__('Copia negli appunti', 'fp-tracking') . '" title="' . esc_attr__('Copia negli appunti', 'fp-tracking') . '">';
+                echo '<span class="dashicons dashicons-admin-page"></span>';
+                echo '<span class="fptracking-copy-feedback" aria-live="polite"></span>';
+                echo '</button></span>';
+            }
         }
     }
 
@@ -490,6 +501,7 @@ final class Settings {
             return;
         }
         wp_enqueue_style('fp-tracking-admin', FP_TRACKING_URL . 'assets/css/admin.css', [], FP_TRACKING_VERSION);
+        wp_enqueue_script('fp-tracking-admin', FP_TRACKING_URL . 'assets/js/admin.js', [], FP_TRACKING_VERSION, true);
     }
 
     public function render_page(): void {
@@ -534,6 +546,19 @@ final class Settings {
             'failed_7d' => 0,
         ];
         $catalogHealth = $this->build_catalog_health();
+
+        // Setup progress: GTM (obbligatorio), GA4, Meta, Brevo, Google Ads, Ads Labels
+        $setup_items = [
+            $gtm_ok,
+            $ga4_ok,
+            $meta_ok,
+            $brevo_ok,
+            $ads_ok,
+            $labels_count === $total_ads && $total_ads > 0,
+        ];
+        $setup_done   = (int) array_sum($setup_items);
+        $setup_total  = 6;
+        $setup_percent = $setup_total > 0 ? (int) round(100 * $setup_done / $setup_total) : 0;
         ?>
         <div class="wrap fptracking-admin-page">
             <?php /* h1 primo nel .wrap: compat notice JS (jQuery('.wrap h1').after). Titolo visibile = h2 nel banner. */ ?>
@@ -548,7 +573,13 @@ final class Settings {
                     </h2>
                     <p><?php esc_html_e('Centralizza tutto il tracking: GTM, GA4, Google Ads, Meta Pixel e server-side CAPI. Tutti i plugin FP instradano gli eventi attraverso questo layer.', 'fp-tracking'); ?></p>
                 </div>
-                <span class="fptracking-page-header-badge">v<?php echo esc_html(FP_TRACKING_VERSION); ?></span>
+                <div class="fptracking-page-header-actions">
+                    <a href="https://github.com/franpass87/FP-Marketing-Tracking-Layer#readme" target="_blank" rel="noopener noreferrer" class="fptracking-header-link">
+                        <span class="dashicons dashicons-book-alt"></span>
+                        <?php esc_html_e('Documentazione', 'fp-tracking'); ?>
+                    </a>
+                    <span class="fptracking-page-header-badge">v<?php echo esc_html(FP_TRACKING_VERSION); ?></span>
+                </div>
             </div>
 
             <!-- ══ STATUS BAR ════════════════════════════════════════════ -->
@@ -575,6 +606,21 @@ final class Settings {
                 </span>
                 <?php endif; ?>
             </div>
+
+            <!-- Setup progress -->
+            <div class="fptracking-setup-progress" role="status" aria-live="polite">
+                <span class="fptracking-setup-label"><?php printf(esc_html__('Setup: %1$d/%2$d', 'fp-tracking'), $setup_done, $setup_total); ?></span>
+                <div class="fptracking-setup-bar" aria-hidden="true">
+                    <div class="fptracking-setup-fill" style="width: <?php echo esc_attr((string) $setup_percent); ?>%"></div>
+                </div>
+            </div>
+
+            <?php if (!$gtm_ok): ?>
+            <div class="fptracking-alert fptracking-alert-info">
+                <span class="dashicons dashicons-info"></span>
+                <?php esc_html_e('Inserisci il GTM Container ID nella sezione Configurazione per abilitare il tracking. È l\'unico campo obbligatorio.', 'fp-tracking'); ?>
+            </div>
+            <?php endif; ?>
 
             <?php settings_errors('fp_tracking_settings_group'); ?>
             <?php if (isset($_GET['updated']) && $_GET['updated'] === 'ads_labels'): ?>
@@ -779,8 +825,8 @@ final class Settings {
                         <p class="description"><?php esc_html_e('Il container GTM viene iniettato automaticamente su tutte le pagine del sito. Inserisci il tuo Container ID.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
-                                <label for="fp_gtm_id"><?php esc_html_e('GTM Container ID', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('gtm_id', 'text', 'GTM-XXXXXXX', []); ?>
+                                <label for="fp_tracking_gtm_id"><?php esc_html_e('GTM Container ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('gtm_id', 'text', 'GTM-XXXXXXX', [], true, 'fp_tracking_gtm_id'); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('Formato: GTM-XXXXXXX — trovalo in GTM → Admin → Container Settings', 'fp-tracking'); ?></span>
                             </div>
                         </div>
@@ -804,8 +850,8 @@ final class Settings {
                     <p class="description"><?php esc_html_e('Eventi nel browser vanno sempre da dataLayer a GTM (client-side). Qui configuri l\'invio server-side a GA4: Measurement ID e API Secret. Il JSON GTM esportato usa automaticamente l\'ID inserito.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
-                                <label><?php esc_html_e('GA4 Measurement ID', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('ga4_measurement_id', 'text', 'G-XXXXXXXXXX', []); ?>
+                                <label for="fp_tracking_ga4_id"><?php esc_html_e('GA4 Measurement ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('ga4_measurement_id', 'text', 'G-XXXXXXXXXX', [], true, 'fp_tracking_ga4_id'); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('GA4 → Admin → Data Streams → scegli stream', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
@@ -834,8 +880,8 @@ final class Settings {
                     <p class="description"><?php esc_html_e('Eventi Meta nel browser passano da GTM (client-side). Qui configuri l\'invio server-side (CAPI): Pixel ID e Access Token. Utile per recuperare conversioni perse (iOS, ad-blocker). Deduplicazione automatica con event_id.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
-                                <label><?php esc_html_e('Meta Pixel ID', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('meta_pixel_id', 'text', '1234567890', []); ?>
+                                <label for="fp_tracking_meta_pixel_id"><?php esc_html_e('Meta Pixel ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('meta_pixel_id', 'text', '1234567890', [], true, 'fp_tracking_meta_pixel_id'); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('Meta Business Manager → Events Manager → il tuo Pixel', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
@@ -859,13 +905,13 @@ final class Settings {
                         <p class="description"><?php esc_html_e('Google Ads per le conversioni (richiede anche i Conversion Label nella sezione Export). Microsoft Clarity per registrare le sessioni utente. Entrambi opzionali.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
-                                <label><?php esc_html_e('Google Ads Conversion ID', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('google_ads_id', 'text', 'AW-XXXXXXXXX', []); ?>
+                                <label for="fp_tracking_google_ads_id"><?php esc_html_e('Google Ads Conversion ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('google_ads_id', 'text', 'AW-XXXXXXXXX', [], true, 'fp_tracking_google_ads_id'); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('Google Ads → Goals → Conversions → Tag setup → Conversion ID', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
-                                <label><?php esc_html_e('Microsoft Clarity Project ID', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('clarity_project_id', 'text', 'xxxxxxxxxx', []); ?>
+                                <label for="fp_tracking_clarity_id"><?php esc_html_e('Microsoft Clarity Project ID', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('clarity_project_id', 'text', 'xxxxxxxxxx', [], true, 'fp_tracking_clarity_id'); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('clarity.microsoft.com → il tuo progetto → Setup → Get tracking code', 'fp-tracking'); ?></span>
                             </div>
                         </div>

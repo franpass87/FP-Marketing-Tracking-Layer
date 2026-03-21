@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.8] - 2026-03-21
+### Added
+- Admin: indicatore setup (X/6) con barra di progresso; link Documentazione in header; pulsanti Copia per GTM ID, GA4 ID, Meta Pixel ID, Google Ads ID, Clarity ID; messaggio contestuale quando GTM non configurato.
+
 ## [1.2.7] - 2026-03-21
 ### Changed
 - Admin: testi chiariti in ogni sezione — descrizioni card (Catalog Health, Queue Health, GA4, Meta, Export, Rule Engine, Validator, Consent, Integrazioni), intro sezioni e hint più chiari.
