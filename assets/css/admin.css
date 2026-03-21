@@ -175,6 +175,53 @@ body.toplevel_page_fp-tracking #wpbody-content > .wrap.fptracking-admin-page {
 }
 
 /* ============================================================
+   SECTIONS (gerarchia pagina)
+   ============================================================ */
+.fptracking-section {
+    margin-top: 36px;
+}
+
+.fptracking-section:first-of-type {
+    margin-top: 0;
+}
+
+.fptracking-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--fpdms-text);
+    margin: 0 0 20px;
+    padding: 0 0 12px;
+    border-bottom: 2px solid var(--fpdms-border);
+}
+
+.fptracking-section-header .dashicons {
+    color: var(--fpdms-primary);
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+}
+
+/* Grid 2 colonne per card affiancate (es. Catalog + Queue) */
+.fptracking-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+@media (max-width: 900px) {
+    .fptracking-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fptracking-cards-grid .fptracking-card {
+    margin-bottom: 0;
+}
+
+/* ============================================================
    CARDS
    ============================================================ */
 .fptracking-card {

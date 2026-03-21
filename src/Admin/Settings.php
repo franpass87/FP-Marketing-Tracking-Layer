@@ -608,6 +608,13 @@ final class Settings {
             </div>
             <?php endif; ?>
 
+            <!-- ══ SEZIONE: Monitoraggio ═══════════════════════════════════ -->
+            <section class="fptracking-section" aria-labelledby="fptracking-heading-monitoraggio">
+                <h2 id="fptracking-heading-monitoraggio" class="fptracking-section-header">
+                    <span class="dashicons dashicons-chart-bar"></span>
+                    <?php esc_html_e('Monitoraggio e salute', 'fp-tracking'); ?>
+                </h2>
+                <div class="fptracking-cards-grid">
             <div class="fptracking-card">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
@@ -726,125 +733,16 @@ final class Settings {
                     </form>
                 </div>
             </div>
+                </div><!-- .fptracking-cards-grid -->
+            </section><!-- .fptracking-section Monitoraggio -->
 
-            <div class="fptracking-card">
-                <div class="fptracking-card-header">
-                    <div class="fptracking-card-header-left">
-                        <span class="dashicons dashicons-filter"></span>
-                        <h2><?php esc_html_e('Rule Engine + Brevo Mapping', 'fp-tracking'); ?></h2>
-                    </div>
-                </div>
-                <div class="fptracking-card-body">
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                        <input type="hidden" name="action" value="fp_tracking_save_rules">
-                        <?php wp_nonce_field('fp_tracking_save_rules'); ?>
-                        <div class="fptracking-fields-grid">
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Disabilita eventi (CSV)', 'fp-tracking'); ?></label>
-                                <input type="text" name="fp_tracking_disabled_events" value="<?php echo esc_attr(implode(',', (array) ($rulesData['disabled_events'] ?? []))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
-                                <span class="fptracking-hint"><?php esc_html_e('Elenco eventi da bloccare prima del dispatch.', 'fp-tracking'); ?></span>
-                            </div>
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Rename eventi (JSON)', 'fp-tracking'); ?></label>
-                                <textarea name="fp_tracking_renames_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['renames'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Esempio: {"generate_lead":"lead_submit"}', 'fp-tracking'); ?></span>
-                            </div>
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Enrich payload globale (JSON)', 'fp-tracking'); ?></label>
-                                <textarea name="fp_tracking_enrich_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['enrich'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Chiavi aggiunte automaticamente a ogni evento.', 'fp-tracking'); ?></span>
-                            </div>
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Brevo mapping eventi (JSON)', 'fp-tracking'); ?></label>
-                                <textarea name="fp_tracking_brevo_mapping_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode($brevoMapping, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Mappa evento FP -> evento Brevo.', 'fp-tracking'); ?></span>
-                            </div>
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Eventi Brevo abilitati (CSV)', 'fp-tracking'); ?></label>
-                                <input type="text" name="fp_tracking_brevo_enabled_events" value="<?php echo esc_attr(implode(',', array_map('strval', $brevoEnabledEvents))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
-                                <span class="fptracking-hint"><?php esc_html_e('Vuoto = tutti gli eventi.', 'fp-tracking'); ?></span>
-                            </div>
-                        </div>
-                        <div class="fptracking-actions-top-gap-sm">
-                            <button type="submit" class="fptracking-btn fptracking-btn-secondary">
-                                <span class="dashicons dashicons-saved"></span>
-                                <?php esc_html_e('Salva regole e mapping', 'fp-tracking'); ?>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <!-- ══ SEZIONE: Configurazione ═══════════════════════════════════ -->
+            <section class="fptracking-section" aria-labelledby="fptracking-heading-configurazione">
+                <h2 id="fptracking-heading-configurazione" class="fptracking-section-header">
+                    <span class="dashicons dashicons-admin-generic"></span>
+                    <?php esc_html_e('Configurazione', 'fp-tracking'); ?>
+                </h2>
 
-            <div class="fptracking-card">
-                <div class="fptracking-card-header">
-                    <div class="fptracking-card-header-left">
-                        <span class="dashicons dashicons-search"></span>
-                        <h2><?php esc_html_e('Validator + Event Inspector', 'fp-tracking'); ?></h2>
-                    </div>
-                </div>
-                <div class="fptracking-card-body">
-                    <p class="description"><?php esc_html_e('Warning recenti di validazione e campione eventi normalizzati (PII mascherata).', 'fp-tracking'); ?></p>
-                    <?php if ($warnings === []): ?>
-                        <p><?php esc_html_e('Nessun warning recente.', 'fp-tracking'); ?></p>
-                    <?php else: ?>
-                        <table class="fptracking-table">
-                            <thead><tr><th><?php esc_html_e('Quando', 'fp-tracking'); ?></th><th><?php esc_html_e('Evento', 'fp-tracking'); ?></th><th><?php esc_html_e('Warning', 'fp-tracking'); ?></th></tr></thead>
-                            <tbody>
-                            <?php foreach ($warnings as $w): ?>
-                                <tr>
-                                    <td><?php echo esc_html((string) ($w['timestamp'] ?? '')); ?></td>
-                                    <td><code><?php echo esc_html((string) ($w['event'] ?? '')); ?></code></td>
-                                    <td><?php echo esc_html(implode(' | ', array_map('strval', (array) ($w['warnings'] ?? [])))); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                    <?php if ($inspectorEvents !== []): ?>
-                        <p class="fptracking-section-title"><?php esc_html_e('Ultimi eventi campionati', 'fp-tracking'); ?></p>
-                        <textarea class="large-text code" rows="8" readonly><?php echo esc_textarea((string) wp_json_encode($inspectorEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="fptracking-card">
-                <div class="fptracking-card-header">
-                    <div class="fptracking-card-header-left">
-                        <span class="dashicons dashicons-shield-alt"></span>
-                        <h2><?php esc_html_e('Consent Audit + Mapping Export/Import', 'fp-tracking'); ?></h2>
-                    </div>
-                </div>
-                <div class="fptracking-card-body">
-                    <p class="description"><?php esc_html_e('Statistiche aggregate consenso e gestione configurazione mapping.', 'fp-tracking'); ?></p>
-                    <div class="fptracking-status-bar">
-                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Consent updates: %d', 'fp-tracking'), (int) ($consentStats['total_updates'] ?? 0)); ?></span>
-                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last revision: %d', 'fp-tracking'), (int) ($consentStats['last_revision'] ?? 0)); ?></span>
-                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last update: %s', 'fp-tracking'), esc_html((string) ($consentStats['last_update_at'] ?? '-'))); ?></span>
-                    </div>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
-                        <input type="hidden" name="action" value="fp_tracking_export_mapping">
-                        <?php wp_nonce_field('fp_tracking_export_mapping'); ?>
-                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
-                            <span class="dashicons dashicons-download"></span>
-                            <?php esc_html_e('Esporta mapping/config JSON', 'fp-tracking'); ?>
-                        </button>
-                    </form>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
-                        <input type="hidden" name="action" value="fp_tracking_import_mapping">
-                        <?php wp_nonce_field('fp_tracking_import_mapping'); ?>
-                        <label for="fp-tracking-import-json"><strong><?php esc_html_e('Importa mapping/config JSON', 'fp-tracking'); ?></strong></label>
-                        <textarea id="fp-tracking-import-json" name="fp_tracking_mapping_json" rows="7" class="large-text code" placeholder="{...}"></textarea>
-                        <div class="fptracking-actions-top-gap-xs">
-                            <button type="submit" class="fptracking-btn fptracking-btn-primary">
-                                <span class="dashicons dashicons-upload"></span>
-                                <?php esc_html_e('Importa JSON', 'fp-tracking'); ?>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- ══ FORM IMPOSTAZIONI ══════════════════════════════════════ -->
             <form method="post" action="options.php">
                 <?php settings_fields('fp_tracking_settings_group'); ?>
 
@@ -1045,8 +943,15 @@ final class Settings {
                 </div>
 
             </form>
+            </section><!-- .fptracking-section Configurazione -->
 
-            <!-- ══ GOOGLE ADS CONVERSION LABELS ═════════════════════════ -->
+            <!-- ══ SEZIONE: Export e Conversioni ═══════════════════════════════════ -->
+            <section class="fptracking-section" aria-labelledby="fptracking-heading-export">
+                <h2 id="fptracking-heading-export" class="fptracking-section-header">
+                    <span class="dashicons dashicons-download"></span>
+                    <?php esc_html_e('Export e conversioni', 'fp-tracking'); ?>
+                </h2>
+
             <div class="fptracking-card">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
@@ -1179,13 +1084,145 @@ final class Settings {
                     </form>
                 </div>
             </div>
+            </section><!-- .fptracking-section Export -->
 
-            <!-- ══ INTEGRAZIONI ATTIVE ═══════════════════════════════════ -->
+            <!-- ══ SEZIONE: Regole, debug e mapping ═══════════════════════════════════ -->
+            <section class="fptracking-section" aria-labelledby="fptracking-heading-regole">
+                <h2 id="fptracking-heading-regole" class="fptracking-section-header">
+                    <span class="dashicons dashicons-filter"></span>
+                    <?php esc_html_e('Regole, debug e mapping', 'fp-tracking'); ?>
+                </h2>
+
             <div class="fptracking-card">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
-                        <span class="dashicons dashicons-networking"></span>
-                        <h2><?php esc_html_e('Integrazioni Plugin FP', 'fp-tracking'); ?></h2>
+                        <span class="dashicons dashicons-admin-tools"></span>
+                        <h2><?php esc_html_e('Rule Engine + Brevo Mapping', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="fp_tracking_save_rules">
+                        <?php wp_nonce_field('fp_tracking_save_rules'); ?>
+                        <div class="fptracking-fields-grid">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Disabilita eventi (CSV)', 'fp-tracking'); ?></label>
+                                <input type="text" name="fp_tracking_disabled_events" value="<?php echo esc_attr(implode(',', (array) ($rulesData['disabled_events'] ?? []))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
+                                <span class="fptracking-hint"><?php esc_html_e('Elenco eventi da bloccare prima del dispatch.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Rename eventi (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_renames_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['renames'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Esempio: {"generate_lead":"lead_submit"}', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Enrich payload globale (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_enrich_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['enrich'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Chiavi aggiunte automaticamente a ogni evento.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Brevo mapping eventi (JSON)', 'fp-tracking'); ?></label>
+                                <textarea name="fp_tracking_brevo_mapping_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode($brevoMapping, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                                <span class="fptracking-hint"><?php esc_html_e('Mappa evento FP -> evento Brevo.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Eventi Brevo abilitati (CSV)', 'fp-tracking'); ?></label>
+                                <input type="text" name="fp_tracking_brevo_enabled_events" value="<?php echo esc_attr(implode(',', array_map('strval', $brevoEnabledEvents))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
+                                <span class="fptracking-hint"><?php esc_html_e('Vuoto = tutti gli eventi.', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+                        <div class="fptracking-actions-top-gap-sm">
+                            <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                                <span class="dashicons dashicons-saved"></span>
+                                <?php esc_html_e('Salva regole e mapping', 'fp-tracking'); ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-search"></span>
+                        <h2><?php esc_html_e('Validator + Event Inspector', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Warning recenti di validazione e campione eventi normalizzati (PII mascherata).', 'fp-tracking'); ?></p>
+                    <?php if ($warnings === []): ?>
+                        <p><?php esc_html_e('Nessun warning recente.', 'fp-tracking'); ?></p>
+                    <?php else: ?>
+                        <table class="fptracking-table">
+                            <thead><tr><th><?php esc_html_e('Quando', 'fp-tracking'); ?></th><th><?php esc_html_e('Evento', 'fp-tracking'); ?></th><th><?php esc_html_e('Warning', 'fp-tracking'); ?></th></tr></thead>
+                            <tbody>
+                            <?php foreach ($warnings as $w): ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) ($w['timestamp'] ?? '')); ?></td>
+                                    <td><code><?php echo esc_html((string) ($w['event'] ?? '')); ?></code></td>
+                                    <td><?php echo esc_html(implode(' | ', array_map('strval', (array) ($w['warnings'] ?? [])))); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                    <?php if ($inspectorEvents !== []): ?>
+                        <p class="fptracking-section-title"><?php esc_html_e('Ultimi eventi campionati', 'fp-tracking'); ?></p>
+                        <textarea class="large-text code" rows="8" readonly><?php echo esc_textarea((string) wp_json_encode($inspectorEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-shield-alt"></span>
+                        <h2><?php esc_html_e('Consent Audit + Mapping Export/Import', 'fp-tracking'); ?></h2>
+                    </div>
+                </div>
+                <div class="fptracking-card-body">
+                    <p class="description"><?php esc_html_e('Statistiche aggregate consenso e gestione configurazione mapping.', 'fp-tracking'); ?></p>
+                    <div class="fptracking-status-bar">
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Consent updates: %d', 'fp-tracking'), (int) ($consentStats['total_updates'] ?? 0)); ?></span>
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last revision: %d', 'fp-tracking'), (int) ($consentStats['last_revision'] ?? 0)); ?></span>
+                        <span class="fptracking-status-pill is-active"><span class="dot"></span> <?php printf(esc_html__('Last update: %s', 'fp-tracking'), esc_html((string) ($consentStats['last_update_at'] ?? '-'))); ?></span>
+                    </div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
+                        <input type="hidden" name="action" value="fp_tracking_export_mapping">
+                        <?php wp_nonce_field('fp_tracking_export_mapping'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                            <span class="dashicons dashicons-download"></span>
+                            <?php esc_html_e('Esporta mapping/config JSON', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
+                        <input type="hidden" name="action" value="fp_tracking_import_mapping">
+                        <?php wp_nonce_field('fp_tracking_import_mapping'); ?>
+                        <label for="fp-tracking-import-json"><strong><?php esc_html_e('Importa mapping/config JSON', 'fp-tracking'); ?></strong></label>
+                        <textarea id="fp-tracking-import-json" name="fp_tracking_mapping_json" rows="7" class="large-text code" placeholder="{...}"></textarea>
+                        <div class="fptracking-actions-top-gap-xs">
+                            <button type="submit" class="fptracking-btn fptracking-btn-primary">
+                                <span class="dashicons dashicons-upload"></span>
+                                <?php esc_html_e('Importa JSON', 'fp-tracking'); ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            </section><!-- .fptracking-section Regole -->
+
+            <!-- ══ SEZIONE: Integrazioni ═══════════════════════════════════ -->
+            <section class="fptracking-section" aria-labelledby="fptracking-heading-integrazioni">
+                <h2 id="fptracking-heading-integrazioni" class="fptracking-section-header">
+                    <span class="dashicons dashicons-networking"></span>
+                    <?php esc_html_e('Integrazioni', 'fp-tracking'); ?>
+                </h2>
+
+            <div class="fptracking-card">
+                <div class="fptracking-card-header">
+                    <div class="fptracking-card-header-left">
+                        <span class="dashicons dashicons-admin-plugins"></span>
+                        <h2><?php esc_html_e('Plugin FP attivi', 'fp-tracking'); ?></h2>
                     </div>
                     <?php if (!empty($integrations)): ?>
                     <span class="fptracking-badge fptracking-badge-info"><?php echo count(array_filter($integrations)); ?> <?php esc_html_e('attive', 'fp-tracking'); ?></span>
@@ -1206,6 +1243,7 @@ final class Settings {
                     <?php endif; ?>
                 </div>
             </div>
+            </section><!-- .fptracking-section Integrazioni -->
 
         </div><!-- .fptracking-admin-page -->
         <?php

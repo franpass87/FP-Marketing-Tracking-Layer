@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.5] - 2026-03-21
+### Changed
+- Admin: pagina riorganizzata con sezioni gerarchiche (Monitoraggio, Configurazione, Export, Regole/debug, Integrazioni) e grid 2 colonne per Catalog Health + Queue Health.
+
 ## [1.2.4] - 2026-03-19
 ### Changed
 - Bridge `fpCtaBarClick` (FP-CTA-Bar): aggiunto parametro `cta_category` nel payload verso `dataLayer` (da `detail.category` / campo categoria admin).
