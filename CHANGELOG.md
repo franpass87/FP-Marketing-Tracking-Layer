@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.7] - 2026-03-21
+### Changed
+- Admin: testi chiariti in ogni sezione — descrizioni card (Catalog Health, Queue Health, GA4, Meta, Export, Rule Engine, Validator, Consent, Integrazioni), intro sezioni e hint più chiari.
+
 ## [1.2.6] - 2026-03-21
 ### Changed
 - Admin: nav rapida con jump-to-sezioni, accento laterale viola sugli header, grid 2 colonne per Rule Engine + Validator, empty state migliorato per Validator (nessun warning).

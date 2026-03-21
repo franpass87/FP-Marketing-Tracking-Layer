@@ -246,6 +246,13 @@ body.toplevel_page_fp-tracking {
     height: 22px;
 }
 
+.fptracking-section-intro {
+    margin: -8px 0 20px 20px;
+    font-size: 13px;
+    color: var(--fpdms-text-light);
+    line-height: 1.5;
+}
+
 /* Grid 2 colonne per card affiancate (es. Catalog + Queue) */
 .fptracking-cards-grid {
     display: grid;
