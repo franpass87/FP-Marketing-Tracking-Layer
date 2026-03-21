@@ -6,6 +6,29 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Card collapsible
+        document.querySelectorAll('.fptracking-card-collapsible').forEach(function (card) {
+            var header = card.querySelector('.fptracking-card-header');
+            var body = card.querySelector('.fptracking-card-body');
+            if (!header || !body) return;
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fptracking-card-toggle';
+            btn.setAttribute('aria-label', (typeof fpTrackingAdmin !== 'undefined' && fpTrackingAdmin.collapse) ? fpTrackingAdmin.collapse : 'Comprimi');
+            btn.setAttribute('aria-expanded', 'true');
+            btn.innerHTML = '<span class="dashicons dashicons-arrow-up-alt2"></span>';
+            header.appendChild(btn);
+
+            btn.addEventListener('click', function () {
+                var collapsed = card.classList.toggle('is-collapsed');
+                var labels = (typeof fpTrackingAdmin !== 'undefined') ? fpTrackingAdmin : { collapse: 'Comprimi', expand: 'Espandi' };
+                btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                btn.setAttribute('aria-label', collapsed ? labels.expand : labels.collapse);
+                btn.querySelector('.dashicons').className = 'dashicons dashicons-' + (collapsed ? 'arrow-down-alt2' : 'arrow-up-alt2');
+            });
+        });
+
         // Copy buttons
         document.querySelectorAll('.fptracking-btn-copy').forEach(function (btn) {
             btn.addEventListener('click', function () {

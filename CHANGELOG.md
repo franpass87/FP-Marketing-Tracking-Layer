@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.9] - 2026-03-21
+### Added
+- Admin: card collassabili (toggle su ogni card); messaggio contestuale quando GA4 o Meta non configurati; tooltip sugli hint Rule Engine; esempi JSON ampliati negli hint.
+### Changed
+- Admin: hint Rule Engine con title per dettagli al passaggio del mouse; esempi più completi (rename, enrich, Brevo mapping).
+
 ## [1.2.8] - 2026-03-21
 ### Added
 - Admin: indicatore setup (X/6) con barra di progresso; link Documentazione in header; pulsanti Copia per GTM ID, GA4 ID, Meta Pixel ID, Google Ads ID, Clarity ID; messaggio contestuale quando GTM non configurato.

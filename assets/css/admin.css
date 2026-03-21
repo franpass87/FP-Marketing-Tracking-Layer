@@ -442,6 +442,44 @@ body.toplevel_page_fp-tracking {
     padding: 24px;
 }
 
+/* Card collapsible */
+.fptracking-card-collapsible .fptracking-card-header {
+    cursor: default;
+    position: relative;
+}
+
+.fptracking-card-toggle {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    color: var(--fpdms-text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.fptracking-card-toggle:hover {
+    color: var(--fpdms-primary);
+    background: rgba(102, 126, 234, 0.08);
+}
+
+.fptracking-card-toggle .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.fptracking-card-collapsible .fptracking-card-header {
+    display: flex;
+    align-items: center;
+}
+
+.fptracking-card-collapsible.is-collapsed .fptracking-card-body {
+    display: none;
+}
+
 .fptracking-card-body p.description {
     color: var(--fpdms-text-light);
     font-size: 13px;

@@ -502,6 +502,10 @@ final class Settings {
         }
         wp_enqueue_style('fp-tracking-admin', FP_TRACKING_URL . 'assets/css/admin.css', [], FP_TRACKING_VERSION);
         wp_enqueue_script('fp-tracking-admin', FP_TRACKING_URL . 'assets/js/admin.js', [], FP_TRACKING_VERSION, true);
+        wp_localize_script('fp-tracking-admin', 'fpTrackingAdmin', [
+            'collapse' => __('Comprimi', 'fp-tracking'),
+            'expand'   => __('Espandi', 'fp-tracking'),
+        ]);
     }
 
     public function render_page(): void {
@@ -620,6 +624,11 @@ final class Settings {
                 <span class="dashicons dashicons-info"></span>
                 <?php esc_html_e('Inserisci il GTM Container ID nella sezione Configurazione per abilitare il tracking. È l\'unico campo obbligatorio.', 'fp-tracking'); ?>
             </div>
+            <?php elseif (!$ga4_ok || !$meta_ok): ?>
+            <div class="fptracking-alert fptracking-alert-info">
+                <span class="dashicons dashicons-info"></span>
+                <?php esc_html_e('Per inviare eventi server-side (GA4 Measurement Protocol, Meta CAPI) e recuperare conversioni perse, configura i relativi campi nella sezione Configurazione.', 'fp-tracking'); ?>
+            </div>
             <?php endif; ?>
 
             <?php settings_errors('fp_tracking_settings_group'); ?>
@@ -675,7 +684,7 @@ final class Settings {
                 </h2>
                 <p class="fptracking-section-intro"><?php esc_html_e('Stato del catalogo eventi e della coda server-side. Verifica che tutto sia coerente prima di rilasciare.', 'fp-tracking'); ?></p>
                 <div class="fptracking-cards-grid">
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-analytics"></span>
@@ -749,7 +758,7 @@ final class Settings {
                 </div>
             </div>
 
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-database-view"></span>
@@ -809,7 +818,7 @@ final class Settings {
                 <?php settings_fields('fp_tracking_settings_group'); ?>
 
                 <!-- Card: Google Tag Manager -->
-                <div class="fptracking-card">
+                <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
                             <span class="dashicons dashicons-admin-site-alt3"></span>
@@ -834,7 +843,7 @@ final class Settings {
                 </div>
 
                 <!-- Card: GA4 Measurement Protocol -->
-                <div class="fptracking-card">
+                <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
                             <span class="dashicons dashicons-chart-area"></span>
@@ -864,7 +873,7 @@ final class Settings {
                 </div>
 
                 <!-- Card: Meta -->
-                <div class="fptracking-card">
+                <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
                             <span class="dashicons dashicons-share"></span>
@@ -894,7 +903,7 @@ final class Settings {
                 </div>
 
                 <!-- Card: Google Ads + Altre piattaforme -->
-                <div class="fptracking-card">
+                <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
                             <span class="dashicons dashicons-megaphone"></span>
@@ -919,7 +928,7 @@ final class Settings {
                 </div>
 
                 <!-- Card: Impostazioni avanzate -->
-                <div class="fptracking-card">
+                <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
                             <span class="dashicons dashicons-admin-settings"></span>
@@ -1017,7 +1026,7 @@ final class Settings {
                 </h2>
                 <p class="fptracking-section-intro"><?php esc_html_e('Conversion Labels per Google Ads e download del container GTM da importare nel tuo account.', 'fp-tracking'); ?></p>
 
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-tag"></span>
@@ -1097,7 +1106,7 @@ final class Settings {
             </div>
 
             <!-- ══ EXPORT GTM ════════════════════════════════════════════ -->
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-download"></span>
@@ -1160,7 +1169,7 @@ final class Settings {
                 <p class="fptracking-section-intro"><?php esc_html_e('Regole eventi, validator, ispettore e backup/restore della configurazione.', 'fp-tracking'); ?></p>
 
                 <div class="fptracking-cards-grid">
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-admin-tools"></span>
@@ -1176,27 +1185,27 @@ final class Settings {
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Disabilita eventi (CSV)', 'fp-tracking'); ?></label>
                                 <input type="text" name="fp_tracking_disabled_events" value="<?php echo esc_attr(implode(',', (array) ($rulesData['disabled_events'] ?? []))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
-                                <span class="fptracking-hint"><?php esc_html_e('Elenco eventi da bloccare prima del dispatch.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint" title="<?php esc_attr_e('Separati da virgola, senza spazi. Gli eventi elencati non verranno inviati a dataLayer né server-side.', 'fp-tracking'); ?>"><?php esc_html_e('Elenco eventi da bloccare prima del dispatch.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Rename eventi (JSON)', 'fp-tracking'); ?></label>
                                 <textarea name="fp_tracking_renames_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['renames'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Esempio: {"generate_lead":"lead_submit"}', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint" title="<?php esc_attr_e('Chiave = nome evento FP, valore = nome in output. Es: generate_lead diventa lead_submit.', 'fp-tracking'); ?>"><?php esc_html_e('Esempio: {"generate_lead":"lead_submit"}, {"purchase":"purchase_complete"}', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Enrich payload globale (JSON)', 'fp-tracking'); ?></label>
                                 <textarea name="fp_tracking_enrich_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode((array) ($rulesData['enrich'] ?? []), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Chiavi aggiunte automaticamente a ogni evento.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint" title="<?php esc_attr_e('Ogni evento inviato avrà queste coppie chiave-valore nel payload. Utile per campi fissi (es. campaign, source).', 'fp-tracking'); ?>"><?php esc_html_e('Esempio: {"campaign":"summer2024","source":"website"}. Chiavi aggiunte a ogni evento.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Brevo mapping eventi (JSON)', 'fp-tracking'); ?></label>
                                 <textarea name="fp_tracking_brevo_mapping_json" rows="4" class="large-text code"><?php echo esc_textarea((string) wp_json_encode($brevoMapping, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
-                                <span class="fptracking-hint"><?php esc_html_e('Mappa evento FP -> evento Brevo.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint" title="<?php esc_attr_e('Chiave = nome evento FP, valore = nome evento Brevo. Gli eventi non mappati usano il nome originale.', 'fp-tracking'); ?>"><?php esc_html_e('Esempio: {"generate_lead":"Lead","purchase":"Purchase"}. Mappa FP -> Brevo.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Eventi Brevo abilitati (CSV)', 'fp-tracking'); ?></label>
                                 <input type="text" name="fp_tracking_brevo_enabled_events" value="<?php echo esc_attr(implode(',', array_map('strval', $brevoEnabledEvents))); ?>" class="regular-text is-monospace" placeholder="purchase,generate_lead">
-                                <span class="fptracking-hint"><?php esc_html_e('Vuoto = tutti gli eventi.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint" title="<?php esc_attr_e('Se vuoto, tutti gli eventi vengono inviati a Brevo. Altrimenti solo gli eventi elencati.', 'fp-tracking'); ?>"><?php esc_html_e('Vuoto = tutti. Es: purchase,generate_lead per solo acquisti e lead.', 'fp-tracking'); ?></span>
                             </div>
                         </div>
                         <div class="fptracking-actions-top-gap-sm">
@@ -1209,7 +1218,7 @@ final class Settings {
                 </div>
             </div>
 
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-search"></span>
@@ -1245,7 +1254,7 @@ final class Settings {
             </div>
                 </div><!-- .fptracking-cards-grid -->
 
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-shield-alt"></span>
@@ -1291,7 +1300,7 @@ final class Settings {
                 </h2>
                 <p class="fptracking-section-intro"><?php esc_html_e('Plugin FP che inviano eventi a questo layer.', 'fp-tracking'); ?></p>
 
-            <div class="fptracking-card">
+            <div class="fptracking-card fptracking-card-collapsible">
                 <div class="fptracking-card-header">
                     <div class="fptracking-card-header-left">
                         <span class="dashicons dashicons-admin-plugins"></span>
