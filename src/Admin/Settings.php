@@ -60,6 +60,10 @@ final class Settings {
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',
         'form_payment_started'      => 'Form Payment Started (Forms)',
+        // Contact click
+        'click_phone'               => 'Phone Click',
+        'click_email'               => 'Email Click',
+        'click_whatsapp'            => 'WhatsApp Click',
     ];
 
     private array $data;

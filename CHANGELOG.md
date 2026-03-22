@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.10] - 2026-03-22
+### Changed
+- GTM export JSON: sostituito il tipo parametro `integer` con `template` per `dataLayerVersion` e priorità tag Consent Mode, per compatibilità con l'import GTM.
+- Google Ads Conversion Labels: aggiunti gli eventi `click_phone`, `click_email` e `click_whatsapp` nella configurazione admin e nell'export container.
+
 ## [1.2.9] - 2026-03-21
 ### Added
 - Admin: card collassabili (toggle su ogni card); messaggio contestuale quando GA4 o Meta non configurati; tooltip sugli hint Rule Engine; esempi JSON ampliati negli hint.
