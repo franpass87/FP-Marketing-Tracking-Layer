@@ -31,15 +31,9 @@ final class GTMExporter {
      * Generates the full GTM container JSON as a PHP array, then encodes it.
      */
     public function generate(): string {
-        $ga4_id    = trim((string) $this->settings->get('ga4_measurement_id', ''));
-        $ads_id    = trim((string) $this->settings->get('google_ads_id', ''));
-        $meta_id   = trim((string) $this->settings->get('meta_pixel_id', ''));
-        if ($ga4_id === '') {
-            $ga4_id = 'G-XXXXXXXXXX';
-        }
-        if ($ads_id === '') {
-            $ads_id = 'AW-XXXXXXXXX';
-        }
+        $ga4_id    = $this->settings->get('ga4_measurement_id', 'G-XXXXXXXXXX');
+        $ads_id    = $this->settings->get('google_ads_id', 'AW-XXXXXXXXX');
+        $meta_id   = $this->settings->get('meta_pixel_id', '');
         $site_url  = get_bloginfo('url');
         $site_name = get_bloginfo('name');
 
@@ -161,11 +155,6 @@ final class GTMExporter {
     }
 
     private function make_constant_var(int $id, string $name, string $value): array {
-        $value = trim($value);
-        if ($value === '') {
-            $value = 'FP_PLACEHOLDER';
-        }
-
         return [
             'accountId'   => '0',
             'containerId' => '0',
@@ -173,7 +162,7 @@ final class GTMExporter {
             'name'        => $name,
             'type'        => 'c',
             'parameter'   => [
-                ['type' => 'TEMPLATE', 'key' => 'value', 'value' => $value],
+                ['type' => 'template', 'key' => 'value', 'value' => $value],
             ],
         ];
     }
@@ -186,9 +175,9 @@ final class GTMExporter {
             'name'        => $name,
             'type'        => 'v',
             'parameter'   => [
-                ['type' => 'INTEGER', 'key' => 'dataLayerVersion', 'value' => '2'],
-                ['type' => 'BOOLEAN', 'key' => 'setDefaultValue',  'value' => 'false'],
-                ['type' => 'TEMPLATE', 'key' => 'name',            'value' => $param],
+                ['type' => 'integer', 'key' => 'dataLayerVersion', 'value' => '2'],
+                ['type' => 'boolean', 'key' => 'setDefaultValue',  'value' => 'false'],
+                ['type' => 'template', 'key' => 'name',            'value' => $param],
             ],
         ];
     }
@@ -216,14 +205,14 @@ final class GTMExporter {
                 'accountId'   => '0',
                 'containerId' => '0',
                 'triggerId'   => (string) $id++,
-                'name'        => 'FP - Event - ' . $meta['label'],
+                'name'        => 'FP - Event: ' . $meta['label'],
                 'type'        => 'CUSTOM_EVENT',
                 'customEventFilter' => [
                     [
                         'type'      => 'EQUALS',
                         'parameter' => [
-                            ['type' => 'TEMPLATE', 'key' => 'arg0', 'value' => '{{_event}}'],
-                            ['type' => 'TEMPLATE', 'key' => 'arg1', 'value' => $event_name],
+                            ['type' => 'template', 'key' => 'arg0', 'value' => '{{_event}}'],
+                            ['type' => 'template', 'key' => 'arg1', 'value' => $event_name],
                         ],
                     ],
                 ],
@@ -257,14 +246,14 @@ final class GTMExporter {
             'tagId'       => (string) $id++,
             'name'        => 'FP - Consent Mode v2 Init',
             'type'        => 'html',
-            'priority'    => ['type' => 'INTEGER', 'key' => 'priority', 'value' => '10'],
+            'priority'    => ['type' => 'integer', 'value' => '10'],
             'parameter'   => [
                 [
-                    'type'  => 'TEMPLATE',
+                    'type'  => 'template',
                     'key'   => 'html',
                     'value' => "<script>\nwindow.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('consent','default',{\n  'analytics_storage':'denied',\n  'ad_storage':'denied',\n  'ad_user_data':'denied',\n  'ad_personalization':'denied',\n  'functionality_storage':'granted',\n  'security_storage':'granted',\n  'wait_for_update': 500\n});\n</script>",
                 ],
-                ['type' => 'BOOLEAN', 'key' => 'supportDocumentWrite', 'value' => 'false'],
+                ['type' => 'boolean', 'key' => 'supportDocumentWrite', 'value' => 'false'],
             ],
             'firingTriggerId' => [$triggers['consent_init']['triggerId']],
         ];
@@ -277,7 +266,7 @@ final class GTMExporter {
             'name'        => 'FP - GA4 Configuration',
             'type'        => 'googtag',
             'parameter'   => [
-                ['type' => 'TEMPLATE', 'key' => 'tagId', 'value' => '{{' . $variables['ga4_id']['name'] . '}}'],
+                ['type' => 'template', 'key' => 'tagId', 'value' => '{{' . $variables['ga4_id']['name'] . '}}'],
             ],
             'firingTriggerId' => [$triggers['all_pages']['triggerId']],
         ];
@@ -294,14 +283,14 @@ final class GTMExporter {
                 'accountId'   => '0',
                 'containerId' => '0',
                 'tagId'       => (string) $id++,
-                'name'        => 'FP - GA4 Event - ' . $meta['label'],
+                'name'        => 'FP - GA4 Event: ' . $meta['label'],
                 'type'        => 'gaawe',
                 'parameter'   => array_merge(
                     [
-                        ['type' => 'TEMPLATE', 'key' => 'measurementIdOverride', 'value' => $ga4_id],
-                        ['type' => 'TEMPLATE', 'key' => 'eventName',     'value' => $event_name],
+                        ['type' => 'template', 'key' => 'measurementId', 'value' => '{{' . $variables['ga4_id']['name'] . '}}'],
+                        ['type' => 'template', 'key' => 'eventName',     'value' => $event_name],
                     ],
-                    $parameters ? [['type' => 'LIST', 'key' => 'eventParameters', 'list' => $parameters]] : []
+                    $parameters ? [['type' => 'list', 'key' => 'eventParameters', 'list' => $parameters]] : []
                 ),
                 'firingTriggerId' => [$triggers[$event_name]['triggerId']],
             ];
@@ -314,12 +303,8 @@ final class GTMExporter {
                     continue;
                 }
 
-                // Read conversion label saved in admin.
+                // Read conversion label saved in admin (may be empty — tag still created as placeholder)
                 $conversion_label = $this->settings->get_ads_label($event_name);
-                if ($conversion_label === '') {
-                    // GTM import rejects awct tags with empty conversionLabel.
-                    continue;
-                }
 
                 // Use event label from EVENTS map if available, else fall back to ADS_EVENTS label
                 $tag_label = self::EVENTS[$event_name]['label'] ?? $event_human_label;
@@ -328,15 +313,15 @@ final class GTMExporter {
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
-                    'name'        => 'FP - Google Ads - ' . $tag_label,
+                    'name'        => 'FP - Google Ads: ' . $tag_label . ($conversion_label ? '' : ' ⚠ label missing'),
                     'type'        => 'awct',
                     'parameter'   => [
-                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => '{{' . $variables['ads_id']['name'] . '}}'],
-                        ['type' => 'TEMPLATE', 'key' => 'conversionLabel', 'value' => $conversion_label],
-                        ['type' => 'TEMPLATE', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
-                        ['type' => 'TEMPLATE', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],
-                        ['type' => 'TEMPLATE', 'key' => 'orderId',         'value' => '{{' . $variables['transaction_id']['name'] . '}}'],
-                        ['type' => 'BOOLEAN',  'key' => 'enableNewCustomerReporting', 'value' => 'false'],
+                        ['type' => 'template', 'key' => 'conversionId',    'value' => '{{' . $variables['ads_id']['name'] . '}}'],
+                        ['type' => 'template', 'key' => 'conversionLabel', 'value' => $conversion_label],
+                        ['type' => 'template', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
+                        ['type' => 'template', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],
+                        ['type' => 'template', 'key' => 'orderId',         'value' => '{{' . $variables['transaction_id']['name'] . '}}'],
+                        ['type' => 'boolean',  'key' => 'enableNewCustomerReporting', 'value' => 'false'],
                     ],
                     'firingTriggerId' => [$triggers[$event_name]['triggerId']],
                 ];
@@ -353,11 +338,11 @@ final class GTMExporter {
                 'type'        => 'html',
                 'parameter'   => [
                     [
-                        'type'  => 'TEMPLATE',
+                        'type'  => 'template',
                         'key'   => 'html',
                         'value' => $this->meta_base_html(),
                     ],
-                    ['type' => 'BOOLEAN', 'key' => 'supportDocumentWrite', 'value' => 'false'],
+                    ['type' => 'boolean', 'key' => 'supportDocumentWrite', 'value' => 'false'],
                 ],
                 'firingTriggerId' => [$triggers['all_pages']['triggerId']],
             ];
@@ -381,15 +366,15 @@ final class GTMExporter {
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
-                    'name'        => 'FP - Meta - ' . self::EVENTS[$fp_event]['label'],
+                    'name'        => 'FP - Meta: ' . self::EVENTS[$fp_event]['label'],
                     'type'        => 'html',
                     'parameter'   => [
                         [
-                            'type'  => 'TEMPLATE',
+                            'type'  => 'template',
                             'key'   => 'html',
                             'value' => '<script>' . $value_param . '</script>',
                         ],
-                        ['type' => 'BOOLEAN', 'key' => 'supportDocumentWrite', 'value' => 'false'],
+                        ['type' => 'boolean', 'key' => 'supportDocumentWrite', 'value' => 'false'],
                     ],
                     'firingTriggerId' => [$triggers[$fp_event]['triggerId']],
                 ];
@@ -622,10 +607,10 @@ final class GTMExporter {
 
         return array_map(
             static fn(string $key, string $var_name): array => [
-                'type' => 'MAP',
+                'type' => 'map',
                 'map'  => [
-                    ['type' => 'TEMPLATE', 'key' => 'name',  'value' => $key],
-                    ['type' => 'TEMPLATE', 'key' => 'value', 'value' => '{{' . $var_name . '}}'],
+                    ['type' => 'template', 'key' => 'name',  'value' => $key],
+                    ['type' => 'template', 'key' => 'value', 'value' => '{{' . $var_name . '}}'],
                 ],
             ],
             array_keys($all_params),

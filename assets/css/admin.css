@@ -125,37 +125,6 @@ body.toplevel_page_fp-tracking {
     line-height: 1.5;
 }
 
-.fptracking-page-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.fptracking-header-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: rgba(255,255,255,0.95);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.12);
-    transition: var(--transition);
-}
-
-.fptracking-header-link:hover {
-    background: rgba(255,255,255,0.22);
-    color: white;
-}
-
-.fptracking-header-link .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-}
-
 .fptracking-page-header-badge {
     background: rgba(255,255,255,0.18);
     border: 1px solid rgba(255,255,255,0.3);
@@ -166,97 +135,6 @@ body.toplevel_page_fp-tracking {
     color: white;
     white-space: nowrap;
     backdrop-filter: blur(4px);
-}
-
-/* ============================================================
-   SETUP PROGRESS
-   ============================================================ */
-.fptracking-setup-progress {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
-}
-
-.fptracking-setup-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fpdms-text-light);
-    min-width: 70px;
-}
-
-.fptracking-setup-bar {
-    flex: 1;
-    max-width: 200px;
-    height: 6px;
-    background: var(--fpdms-border-light);
-    border-radius: var(--radius-pill);
-    overflow: hidden;
-}
-
-.fptracking-setup-fill {
-    height: 100%;
-    background: var(--fpdms-gradient-primary);
-    border-radius: var(--radius-pill);
-    transition: width 0.4s ease;
-}
-
-/* ============================================================
-   COPY BUTTON (campi con ID/token)
-   ============================================================ */
-.fptracking-field-copy-wrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    max-width: 400px;
-}
-
-.fptracking-field-copy-wrap input {
-    flex: 1;
-    min-width: 0;
-}
-
-.fptracking-btn-copy {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 2px solid var(--fpdms-border);
-    border-radius: var(--radius-md);
-    background: var(--fpdms-bg-white);
-    color: var(--fpdms-text-light);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.fptracking-btn-copy:hover {
-    border-color: var(--fpdms-primary);
-    color: var(--fpdms-primary);
-}
-
-.fptracking-btn-copy .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-}
-
-.fptracking-copy-feedback {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--fpdms-success);
-    margin-left: 2px;
-}
-
-.fptracking-copy-feedback:not(.is-visible) {
-    display: none;
-}
-
-.fptracking-field .fptracking-field-copy-wrap {
-    max-width: 100%;
 }
 
 /* ============================================================
@@ -368,13 +246,6 @@ body.toplevel_page_fp-tracking {
     height: 22px;
 }
 
-.fptracking-section-intro {
-    margin: -8px 0 20px 20px;
-    font-size: 13px;
-    color: var(--fpdms-text-light);
-    line-height: 1.5;
-}
-
 /* Grid 2 colonne per card affiancate (es. Catalog + Queue) */
 .fptracking-cards-grid {
     display: grid;
@@ -440,44 +311,6 @@ body.toplevel_page_fp-tracking {
 
 .fptracking-card-body {
     padding: 24px;
-}
-
-/* Card collapsible */
-.fptracking-card-collapsible .fptracking-card-header {
-    cursor: default;
-    position: relative;
-}
-
-.fptracking-card-toggle {
-    margin-left: auto;
-    flex-shrink: 0;
-    padding: 4px 8px;
-    border: none;
-    background: transparent;
-    color: var(--fpdms-text-muted);
-    cursor: pointer;
-    border-radius: var(--radius-sm);
-    transition: var(--transition);
-}
-
-.fptracking-card-toggle:hover {
-    color: var(--fpdms-primary);
-    background: rgba(102, 126, 234, 0.08);
-}
-
-.fptracking-card-toggle .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-}
-
-.fptracking-card-collapsible .fptracking-card-header {
-    display: flex;
-    align-items: center;
-}
-
-.fptracking-card-collapsible.is-collapsed .fptracking-card-body {
-    display: none;
 }
 
 .fptracking-card-body p.description {
@@ -1044,18 +877,6 @@ body.toplevel_page_fp-tracking {
         flex-direction: column;
         align-items: flex-start;
         padding: 20px;
-    }
-
-    .fptracking-page-header-actions {
-        flex-wrap: wrap;
-    }
-
-    .fptracking-setup-progress {
-        flex-wrap: wrap;
-    }
-
-    .fptracking-setup-bar {
-        max-width: 100%;
     }
 
     .fptracking-nav-sections {

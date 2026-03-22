@@ -2,53 +2,6 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
-## [1.2.17] - 2026-03-22
-### Fixed
-- GTM export JSON: aggiunta guardia in `make_constant_var()` per impedire qualsiasi `value` vuoto nelle variabili costanti (fallback `FP_PLACEHOLDER`), evitando errori import GTM su `vendorTemplate.parameter.value`.
-
-## [1.2.16] - 2026-03-22
-### Fixed
-- GTM export JSON: evitata la generazione di variabili costanti con valore vuoto (`FP - GA4 Measurement ID`, `FP - Google Ads ID`) usando fallback non vuoti, per superare la validazione GTM su `vendorTemplate.parameter.value`.
-
-## [1.2.15] - 2026-03-22
-### Fixed
-- GTM export JSON: i tag Google Ads (`awct`) vengono generati solo quando `conversionLabel` è valorizzato, evitando l'errore import GTM "conversionLabel: Il valore non deve essere vuoto".
-
-## [1.2.14] - 2026-03-22
-### Fixed
-- GTM export JSON: per i tag GA4 Event (`type: gaawe`) usato `measurementIdOverride` con valore esplicito del Measurement ID, evitando l'errore "vendorTemplate.parameter.measurementIdOverride: Il valore non deve essere vuoto" in import GTM.
-
-## [1.2.13] - 2026-03-22
-### Fixed
-- GTM export JSON: rimossi i caratteri `:` e il simbolo di warning dai nomi generati di trigger/tag (`FP - Event`, `FP - GA4 Event`, `FP - Google Ads`, `FP - Meta`) per compatibilità con la validazione nomi in import GTM.
-
-## [1.2.12] - 2026-03-22
-### Fixed
-- GTM export JSON: normalizzati i `Parameter.type` nel formato enum atteso da GTM import (`TEMPLATE`, `INTEGER`, `BOOLEAN`, `LIST`, `MAP`) per eliminare gli errori "Error deserializing enum type [Type]".
-
-## [1.2.11] - 2026-03-22
-### Fixed
-- GTM export JSON: ripristinato `dataLayerVersion` come parametro `integer` e normalizzato `priority` del tag Consent Mode come parametro numerico con `key`, per evitare errori enum in import.
-
-## [1.2.10] - 2026-03-22
-### Changed
-- GTM export JSON: sostituito il tipo parametro `integer` con `template` per `dataLayerVersion` e priorità tag Consent Mode, per compatibilità con l'import GTM.
-- Google Ads Conversion Labels: aggiunti gli eventi `click_phone`, `click_email` e `click_whatsapp` nella configurazione admin e nell'export container.
-
-## [1.2.9] - 2026-03-21
-### Added
-- Admin: card collassabili (toggle su ogni card); messaggio contestuale quando GA4 o Meta non configurati; tooltip sugli hint Rule Engine; esempi JSON ampliati negli hint.
-### Changed
-- Admin: hint Rule Engine con title per dettagli al passaggio del mouse; esempi più completi (rename, enrich, Brevo mapping).
-
-## [1.2.8] - 2026-03-21
-### Added
-- Admin: indicatore setup (X/6) con barra di progresso; link Documentazione in header; pulsanti Copia per GTM ID, GA4 ID, Meta Pixel ID, Google Ads ID, Clarity ID; messaggio contestuale quando GTM non configurato.
-
-## [1.2.7] - 2026-03-21
-### Changed
-- Admin: testi chiariti in ogni sezione — descrizioni card (Catalog Health, Queue Health, GA4, Meta, Export, Rule Engine, Validator, Consent, Integrazioni), intro sezioni e hint più chiari.
-
 ## [1.2.6] - 2026-03-21
 ### Changed
 - Admin: nav rapida con jump-to-sezioni, accento laterale viola sugli header, grid 2 colonne per Rule Engine + Validator, empty state migliorato per Validator (nessun warning).
