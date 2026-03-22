@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.19] - 2026-03-23
+### Added
+- Google Ads conversion: `gift_voucher_purchased` e `gift_card_redeemed` in ADS_EVENTS (tag awct con value/currency).
+
 ## [1.2.18] - 2026-03-23
 ### Added
 - Eventi gift card FP-Discount-Gift nel catalogo: `gift_card_applied`, `gift_card_redeemed`, `gift_card_removed`, `gift_card_issued`, `gift_card_expiring_soon`, `gift_card_expired`.

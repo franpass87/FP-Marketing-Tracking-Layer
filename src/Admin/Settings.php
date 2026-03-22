@@ -58,6 +58,8 @@ final class Settings {
         'experience_paid'           => 'Experience Paid (Experiences)',
         'rtb_approved'              => 'RTB Approved (Experiences)',
         'gift_purchased'            => 'Gift Purchased (Experiences)',
+        'gift_voucher_purchased'    => 'Gift Voucher Purchased (Discount/Gift)',
+        'gift_card_redeemed'        => 'Gift Card Redeemed (Discount/Gift)',
         // Lead / Micro-conversioni
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',
