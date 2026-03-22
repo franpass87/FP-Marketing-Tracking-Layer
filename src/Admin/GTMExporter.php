@@ -205,7 +205,7 @@ final class GTMExporter {
                 'accountId'   => '0',
                 'containerId' => '0',
                 'triggerId'   => (string) $id++,
-                'name'        => 'FP - Event: ' . $meta['label'],
+                'name'        => 'FP - Event - ' . $meta['label'],
                 'type'        => 'CUSTOM_EVENT',
                 'customEventFilter' => [
                     [
@@ -283,7 +283,7 @@ final class GTMExporter {
                 'accountId'   => '0',
                 'containerId' => '0',
                 'tagId'       => (string) $id++,
-                'name'        => 'FP - GA4 Event: ' . $meta['label'],
+                'name'        => 'FP - GA4 Event - ' . $meta['label'],
                 'type'        => 'gaawe',
                 'parameter'   => array_merge(
                     [
@@ -313,7 +313,7 @@ final class GTMExporter {
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
-                    'name'        => 'FP - Google Ads: ' . $tag_label . ($conversion_label ? '' : ' ⚠ label missing'),
+                    'name'        => 'FP - Google Ads - ' . $tag_label . ($conversion_label ? '' : ' label missing'),
                     'type'        => 'awct',
                     'parameter'   => [
                         ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => '{{' . $variables['ads_id']['name'] . '}}'],
@@ -366,7 +366,7 @@ final class GTMExporter {
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
-                    'name'        => 'FP - Meta: ' . self::EVENTS[$fp_event]['label'],
+                    'name'        => 'FP - Meta - ' . self::EVENTS[$fp_event]['label'],
                     'type'        => 'html',
                     'parameter'   => [
                         [

@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.13] - 2026-03-22
+### Fixed
+- GTM export JSON: rimossi i caratteri `:` e il simbolo di warning dai nomi generati di trigger/tag (`FP - Event`, `FP - GA4 Event`, `FP - Google Ads`, `FP - Meta`) per compatibilità con la validazione nomi in import GTM.
+
 ## [1.2.12] - 2026-03-22
 ### Fixed
 - GTM export JSON: normalizzati i `Parameter.type` nel formato enum atteso da GTM import (`TEMPLATE`, `INTEGER`, `BOOLEAN`, `LIST`, `MAP`) per eliminare gli errori "Error deserializing enum type [Type]".
