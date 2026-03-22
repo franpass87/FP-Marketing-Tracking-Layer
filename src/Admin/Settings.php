@@ -37,6 +37,8 @@ final class Settings {
         'brevo_enabled'      => false,
         'brevo_api_key'      => '',
         'brevo_endpoint'     => 'https://api.brevo.com/v3/events',
+        'brevo_list_id_it'   => '',
+        'brevo_list_id_en'   => '',
         'ads_labels'         => [],
     ];
 
@@ -205,6 +207,8 @@ final class Settings {
         add_action('admin_post_fp_tracking_export_mapping', [$this, 'handle_export_mapping']);
         add_action('admin_post_fp_tracking_import_mapping', [$this, 'handle_import_mapping']);
         add_action('admin_post_fp_tracking_export_catalog_health', [$this, 'handle_export_catalog_health']);
+        add_action('wp_ajax_fp_tracking_load_brevo_lists', [$this, 'ajax_load_brevo_lists']);
+        add_action('wp_ajax_fp_tracking_test_brevo', [$this, 'ajax_test_brevo']);
     }
 
     public function add_menu_page(): void {
@@ -273,7 +277,7 @@ final class Settings {
             }
             echo '</select>';
         } else {
-            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id', 'brevo_api_key', 'brevo_endpoint'], true) ? ' is-monospace' : '';
+            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id', 'brevo_api_key', 'brevo_endpoint', 'brevo_list_id_it', 'brevo_list_id_en'], true) ? ' is-monospace' : '';
             $id_attr = $input_id !== '' ? ' id="' . esc_attr($input_id) . '"' : '';
 
             if ($with_copy && $input_id !== '') {
@@ -308,6 +312,8 @@ final class Settings {
         $clean['brevo_enabled']      = !empty($input['brevo_enabled']);
         $clean['brevo_api_key']      = sanitize_text_field($input['brevo_api_key'] ?? '');
         $clean['brevo_endpoint']     = esc_url_raw($input['brevo_endpoint'] ?? 'https://api.brevo.com/v3/events');
+        $clean['brevo_list_id_it']   = absint($input['brevo_list_id_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_en']   = absint($input['brevo_list_id_en'] ?? 0) ?: '';
         $clean['inspector_sample_rate'] = max(1, min(100, (int) ($input['inspector_sample_rate'] ?? 10)));
         $clean['debug_mode']         = !empty($input['debug_mode']);
         return $clean;
@@ -472,6 +478,45 @@ final class Settings {
     /**
      * Exports the Catalog Health report as JSON for QA/release checks.
      */
+    /**
+     * AJAX: carica le liste Brevo per popolare i campi lista ITA/ENG.
+     */
+    public function ajax_load_brevo_lists(): void {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Non autorizzato.', 'fp-tracking')]);
+        }
+        check_ajax_referer('fp_tracking_admin');
+
+        $service = new \FPTracking\Brevo\BrevoListsService($this);
+        $result = $service->get_lists();
+
+        if ($result['success']) {
+            wp_send_json_success(['lists' => $result['lists']]);
+        }
+        wp_send_json_error(['message' => $result['error'] ?? __('Errore caricamento liste.', 'fp-tracking')]);
+    }
+
+    /**
+     * AJAX: testa la connessione Brevo.
+     */
+    public function ajax_test_brevo(): void {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Non autorizzato.', 'fp-tracking')]);
+        }
+        check_ajax_referer('fp_tracking_admin');
+
+        $service = new \FPTracking\Brevo\BrevoListsService($this);
+        $result = $service->test_connection();
+
+        if ($result['success']) {
+            wp_send_json_success([
+                'message' => $result['message'],
+                'account' => $result['account'],
+            ]);
+        }
+        wp_send_json_error(['message' => $result['message']]);
+    }
+
     public function handle_export_catalog_health(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized', 403);
@@ -507,8 +552,10 @@ final class Settings {
         wp_enqueue_style('fp-tracking-admin', FP_TRACKING_URL . 'assets/css/admin.css', [], FP_TRACKING_VERSION);
         wp_enqueue_script('fp-tracking-admin', FP_TRACKING_URL . 'assets/js/admin.js', [], FP_TRACKING_VERSION, true);
         wp_localize_script('fp-tracking-admin', 'fpTrackingAdmin', [
-            'collapse' => __('Comprimi', 'fp-tracking'),
-            'expand'   => __('Espandi', 'fp-tracking'),
+            'collapse'   => __('Comprimi', 'fp-tracking'),
+            'expand'     => __('Espandi', 'fp-tracking'),
+            'ajaxUrl'    => admin_url('admin-ajax.php'),
+            'nonce'      => wp_create_nonce('fp_tracking_admin'),
         ]);
     }
 
@@ -989,10 +1036,32 @@ final class Settings {
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Brevo API Key', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_api_key', 'password', '', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Usata per Events API, Contacts API e dagli altri plugin FP (Forms, Restaurant, Experiences).', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Brevo Endpoint', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_endpoint', 'text', 'https://api.brevo.com/v3/events', []); ?>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_it"><?php esc_html_e('Lista Default ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_it', 'text', '2', [], false, 'fp_tracking_brevo_list_id_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Lista usata per contatti in italiano. Usata da Forms, Restaurant e altri plugin FP.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_en"><?php esc_html_e('Lista Default ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_en', 'text', '3', [], false, 'fp_tracking_brevo_list_id_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Lista usata per contatti in inglese. Se vuota, viene usata la lista ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Carica liste Brevo', 'fp-tracking'); ?></label>
+                                <button type="button" id="fp-tracking-load-brevo-lists" class="button" <?php disabled(empty($this->get('brevo_api_key'))); ?>>
+                                    <?php esc_html_e('Carica liste disponibili', 'fp-tracking'); ?>
+                                </button>
+                                <div id="fp-tracking-brevo-lists-container" style="margin-top:10px;"></div>
+                                <button type="button" id="fp-tracking-test-brevo" class="button" style="margin-top:8px;" <?php disabled(empty($this->get('brevo_api_key'))); ?>>
+                                    <?php esc_html_e('Testa connessione Brevo', 'fp-tracking'); ?>
+                                </button>
+                                <div id="fp-tracking-brevo-test-result" style="margin-top:8px;"></div>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Inspector Sample Rate (%)', 'fp-tracking'); ?></label>

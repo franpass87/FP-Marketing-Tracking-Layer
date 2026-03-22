@@ -1079,3 +1079,14 @@ body.toplevel_page_fp-tracking {
         scroll-behavior: auto;
     }
 }
+
+/* Brevo load/test buttons - spinner */
+.dashicons.spin {
+    animation: fptracking-spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes fptracking-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

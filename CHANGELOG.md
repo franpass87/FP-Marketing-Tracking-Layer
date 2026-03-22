@@ -2,6 +2,14 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.17] - 2026-03-23
+### Added
+- Liste Brevo ITA e ENG centralizzate: campi `brevo_list_id_it` e `brevo_list_id_en` nella sezione Avanzate.
+- Funzione helper `fp_tracking_get_brevo_settings()` per altri plugin FP (Forms, Restaurant, Experiences).
+- Servizio `BrevoListsService` per caricare le liste da Brevo API e testare la connessione.
+- AJAX `fp_tracking_load_brevo_lists` e `fp_tracking_test_brevo` nella pagina admin.
+- Filtro `fp_tracking_brevo_settings` per override delle impostazioni centralizzate.
+
 ## [1.2.16] - 2026-03-22
 ### Fixed
 - GTM export JSON: evitata la generazione di variabili costanti con valore vuoto (`FP - GA4 Measurement ID`, `FP - Google Ads ID`) usando fallback non vuoti, per superare la validazione GTM su `vendorTemplate.parameter.value`.
