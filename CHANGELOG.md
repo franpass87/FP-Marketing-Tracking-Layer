@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.12] - 2026-03-22
+### Fixed
+- GTM export JSON: normalizzati i `Parameter.type` nel formato enum atteso da GTM import (`TEMPLATE`, `INTEGER`, `BOOLEAN`, `LIST`, `MAP`) per eliminare gli errori "Error deserializing enum type [Type]".
+
 ## [1.2.11] - 2026-03-22
 ### Fixed
 - GTM export JSON: ripristinato `dataLayerVersion` come parametro `integer` e normalizzato `priority` del tag Consent Mode come parametro numerico con `key`, per evitare errori enum in import.
