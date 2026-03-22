@@ -31,9 +31,15 @@ final class GTMExporter {
      * Generates the full GTM container JSON as a PHP array, then encodes it.
      */
     public function generate(): string {
-        $ga4_id    = $this->settings->get('ga4_measurement_id', 'G-XXXXXXXXXX');
-        $ads_id    = $this->settings->get('google_ads_id', 'AW-XXXXXXXXX');
-        $meta_id   = $this->settings->get('meta_pixel_id', '');
+        $ga4_id    = trim((string) $this->settings->get('ga4_measurement_id', ''));
+        $ads_id    = trim((string) $this->settings->get('google_ads_id', ''));
+        $meta_id   = trim((string) $this->settings->get('meta_pixel_id', ''));
+        if ($ga4_id === '') {
+            $ga4_id = 'G-XXXXXXXXXX';
+        }
+        if ($ads_id === '') {
+            $ads_id = 'AW-XXXXXXXXX';
+        }
         $site_url  = get_bloginfo('url');
         $site_name = get_bloginfo('name');
 
