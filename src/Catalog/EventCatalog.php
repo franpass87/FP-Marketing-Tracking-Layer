@@ -109,6 +109,12 @@ final class EventCatalog
         'discount_removed'            => ['label' => 'Discount Removed',            'type' => 'ga4'],
         'gift_voucher_purchased'      => ['label' => 'Gift Voucher Purchased',      'type' => 'ga4'],
         'gift_voucher_redeemed'       => ['label' => 'Gift Voucher Redeemed',       'type' => 'ga4'],
+        'gift_card_applied'           => ['label' => 'Gift Card Applied',           'type' => 'ga4'],
+        'gift_card_redeemed'          => ['label' => 'Gift Card Redeemed',          'type' => 'ga4'],
+        'gift_card_removed'           => ['label' => 'Gift Card Removed',           'type' => 'ga4'],
+        'gift_card_issued'            => ['label' => 'Gift Card Issued',            'type' => 'ga4'],
+        'gift_card_expiring_soon'     => ['label' => 'Gift Card Expiring Soon',     'type' => 'ga4'],
+        'gift_card_expired'           => ['label' => 'Gift Card Expired',           'type' => 'ga4'],
     ];
 
     /**
@@ -125,6 +131,7 @@ final class EventCatalog
         'rtb_approved'                => 'Purchase',
         'gift_purchased'              => 'Purchase',
         'gift_voucher_purchased'      => 'Purchase',
+        'gift_card_redeemed'          => 'Purchase',
         'begin_checkout'              => 'InitiateCheckout',
         'booking_submitted'           => 'InitiateCheckout',
         'experience_checkout_started' => 'InitiateCheckout',
@@ -163,6 +170,12 @@ final class EventCatalog
         'discount_removed',
         'gift_voucher_purchased',
         'gift_voucher_redeemed',
+        'gift_card_applied',
+        'gift_card_redeemed',
+        'gift_card_removed',
+        'gift_card_issued',
+        'gift_card_expiring_soon',
+        'gift_card_expired',
     ];
 
     /**
@@ -200,6 +213,12 @@ final class EventCatalog
         'discount_removed'       => ['coupon'],
         'gift_voucher_purchased' => ['voucher_id'],
         'gift_voucher_redeemed'  => ['voucher_id'],
+        'gift_card_applied'      => ['gift_card_code'],
+        'gift_card_redeemed'     => ['gift_card_code'],
+        'gift_card_removed'      => ['gift_card_code'],
+        'gift_card_issued'       => ['gift_card_code'],
+        'gift_card_expiring_soon'=> ['gift_card_code'],
+        'gift_card_expired'      => ['gift_card_code'],
     ];
 
     /**

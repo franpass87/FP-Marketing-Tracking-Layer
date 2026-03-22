@@ -148,6 +148,10 @@ final class GTMExporter {
             'voucher_id'        => 'FP - DL voucher_id',
             'order_id'          => 'FP - DL order_id',
             'source'            => 'FP - DL source',
+            'gift_card_code'    => 'FP - DL gift_card_code',
+            'gift_card_id'      => 'FP - DL gift_card_id',
+            'expires_at'        => 'FP - DL expires_at',
+            'remaining_balance' => 'FP - DL remaining_balance',
             // Error events
             'error_message'     => 'FP - DL error_message',
             'error_type'        => 'FP - DL error_type',
@@ -366,6 +370,7 @@ final class GTMExporter {
                     'purchase', 'event_ticket_purchase',
                     'booking_confirmed', 'booking_payment_completed',
                     'experience_paid', 'rtb_approved', 'gift_purchased',
+                    'gift_voucher_purchased', 'gift_card_redeemed',
                     'add_to_cart', 'begin_checkout', 'form_payment_started',
                 ];
                 $value_param = in_array($fp_event, $events_with_value, true)
@@ -607,6 +612,37 @@ final class GTMExporter {
                 'voucher_id'     => $variables['voucher_id']['name'],
                 'order_id'       => $variables['order_id']['name'],
                 'reservation_id' => $variables['reservation_id']['name'],
+                'source'         => $variables['source']['name'],
+            ],
+            in_array($event_name, ['gift_card_applied', 'gift_card_removed'], true) => [
+                'gift_card_code' => $variables['gift_card_code']['name'],
+                'gift_card_id'   => $variables['gift_card_id']['name'],
+                'value'          => $variables['value']['name'],
+                'currency'       => $variables['currency']['name'],
+                'source'         => $variables['source']['name'],
+            ],
+            $event_name === 'gift_card_redeemed' => [
+                'gift_card_code'    => $variables['gift_card_code']['name'],
+                'gift_card_id'      => $variables['gift_card_id']['name'],
+                'order_id'          => $variables['order_id']['name'],
+                'value'             => $variables['value']['name'],
+                'remaining_balance' => $variables['remaining_balance']['name'],
+                'currency'          => $variables['currency']['name'],
+                'source'            => $variables['source']['name'],
+            ],
+            in_array($event_name, ['gift_card_issued'], true) => [
+                'gift_card_code' => $variables['gift_card_code']['name'],
+                'gift_card_id'   => $variables['gift_card_id']['name'],
+                'value'          => $variables['value']['name'],
+                'currency'       => $variables['currency']['name'],
+                'source'         => $variables['source']['name'],
+            ],
+            in_array($event_name, ['gift_card_expiring_soon', 'gift_card_expired'], true) => [
+                'gift_card_code' => $variables['gift_card_code']['name'],
+                'gift_card_id'   => $variables['gift_card_id']['name'],
+                'value'          => $variables['value']['name'],
+                'currency'       => $variables['currency']['name'],
+                'expires_at'     => $variables['expires_at']['name'],
                 'source'         => $variables['source']['name'],
             ],
 
