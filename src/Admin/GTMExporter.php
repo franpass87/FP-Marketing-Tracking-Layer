@@ -161,6 +161,11 @@ final class GTMExporter {
     }
 
     private function make_constant_var(int $id, string $name, string $value): array {
+        $value = trim($value);
+        if ($value === '') {
+            $value = 'FP_PLACEHOLDER';
+        }
+
         return [
             'accountId'   => '0',
             'containerId' => '0',

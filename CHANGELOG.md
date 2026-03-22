@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.17] - 2026-03-22
+### Fixed
+- GTM export JSON: aggiunta guardia in `make_constant_var()` per impedire qualsiasi `value` vuoto nelle variabili costanti (fallback `FP_PLACEHOLDER`), evitando errori import GTM su `vendorTemplate.parameter.value`.
+
 ## [1.2.16] - 2026-03-22
 ### Fixed
 - GTM export JSON: evitata la generazione di variabili costanti con valore vuoto (`FP - GA4 Measurement ID`, `FP - Google Ads ID`) usando fallback non vuoti, per superare la validazione GTM su `vendorTemplate.parameter.value`.
