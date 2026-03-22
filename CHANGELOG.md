@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.15] - 2026-03-22
+### Fixed
+- GTM export JSON: i tag Google Ads (`awct`) vengono generati solo quando `conversionLabel` è valorizzato, evitando l'errore import GTM "conversionLabel: Il valore non deve essere vuoto".
+
 ## [1.2.14] - 2026-03-22
 ### Fixed
 - GTM export JSON: per i tag GA4 Event (`type: gaawe`) usato `measurementIdOverride` con valore esplicito del Measurement ID, evitando l'errore "vendorTemplate.parameter.measurementIdOverride: Il valore non deve essere vuoto" in import GTM.

@@ -303,8 +303,12 @@ final class GTMExporter {
                     continue;
                 }
 
-                // Read conversion label saved in admin (may be empty — tag still created as placeholder)
+                // Read conversion label saved in admin.
                 $conversion_label = $this->settings->get_ads_label($event_name);
+                if ($conversion_label === '') {
+                    // GTM import rejects awct tags with empty conversionLabel.
+                    continue;
+                }
 
                 // Use event label from EVENTS map if available, else fall back to ADS_EVENTS label
                 $tag_label = self::EVENTS[$event_name]['label'] ?? $event_human_label;
@@ -313,7 +317,7 @@ final class GTMExporter {
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
-                    'name'        => 'FP - Google Ads - ' . $tag_label . ($conversion_label ? '' : ' label missing'),
+                    'name'        => 'FP - Google Ads - ' . $tag_label,
                     'type'        => 'awct',
                     'parameter'   => [
                         ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => '{{' . $variables['ads_id']['name'] . '}}'],
