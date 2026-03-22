@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.11] - 2026-03-22
+### Fixed
+- GTM export JSON: ripristinato `dataLayerVersion` come parametro `integer` e normalizzato `priority` del tag Consent Mode come parametro numerico con `key`, per evitare errori enum in import.
+
 ## [1.2.10] - 2026-03-22
 ### Changed
 - GTM export JSON: sostituito il tipo parametro `integer` con `template` per `dataLayerVersion` e priorità tag Consent Mode, per compatibilità con l'import GTM.

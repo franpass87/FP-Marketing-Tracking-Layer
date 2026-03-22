@@ -175,7 +175,7 @@ final class GTMExporter {
             'name'        => $name,
             'type'        => 'v',
             'parameter'   => [
-                ['type' => 'template', 'key' => 'dataLayerVersion', 'value' => '2'],
+                ['type' => 'integer', 'key' => 'dataLayerVersion', 'value' => '2'],
                 ['type' => 'boolean', 'key' => 'setDefaultValue',  'value' => 'false'],
                 ['type' => 'template', 'key' => 'name',            'value' => $param],
             ],
@@ -246,7 +246,7 @@ final class GTMExporter {
             'tagId'       => (string) $id++,
             'name'        => 'FP - Consent Mode v2 Init',
             'type'        => 'html',
-            'priority'    => ['type' => 'template', 'value' => '10'],
+            'priority'    => ['type' => 'integer', 'key' => 'priority', 'value' => '10'],
             'parameter'   => [
                 [
                     'type'  => 'template',
