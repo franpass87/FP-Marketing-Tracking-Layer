@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.14] - 2026-03-22
+### Fixed
+- GTM export JSON: per i tag GA4 Event (`type: gaawe`) usato `measurementIdOverride` con valore esplicito del Measurement ID, evitando l'errore "vendorTemplate.parameter.measurementIdOverride: Il valore non deve essere vuoto" in import GTM.
+
 ## [1.2.13] - 2026-03-22
 ### Fixed
 - GTM export JSON: rimossi i caratteri `:` e il simbolo di warning dai nomi generati di trigger/tag (`FP - Event`, `FP - GA4 Event`, `FP - Google Ads`, `FP - Meta`) per compatibilità con la validazione nomi in import GTM.

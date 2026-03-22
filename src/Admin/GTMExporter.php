@@ -287,7 +287,7 @@ final class GTMExporter {
                 'type'        => 'gaawe',
                 'parameter'   => array_merge(
                     [
-                        ['type' => 'TEMPLATE', 'key' => 'measurementId', 'value' => '{{' . $variables['ga4_id']['name'] . '}}'],
+                        ['type' => 'TEMPLATE', 'key' => 'measurementIdOverride', 'value' => $ga4_id],
                         ['type' => 'TEMPLATE', 'key' => 'eventName',     'value' => $event_name],
                     ],
                     $parameters ? [['type' => 'LIST', 'key' => 'eventParameters', 'list' => $parameters]] : []
