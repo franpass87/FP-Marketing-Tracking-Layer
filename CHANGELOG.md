@@ -2,19 +2,9 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
-## [1.2.20] - 2026-03-22
-### Fixed
-- `error_log` GA4 Measurement Protocol condizionato anche a WP_DEBUG oltre a debug_mode (no-debug-in-production).
-
-## [1.2.19] - 2026-03-23
-### Added
-- Google Ads conversion: `gift_voucher_purchased` e `gift_card_redeemed` in ADS_EVENTS (tag awct con value/currency).
-
 ## [1.2.18] - 2026-03-23
-### Added
-- Eventi gift card FP-Discount-Gift nel catalogo: `gift_card_applied`, `gift_card_redeemed`, `gift_card_removed`, `gift_card_issued`, `gift_card_expiring_soon`, `gift_card_expired`.
-- Variabili GTM `gift_card_code`, `gift_card_id`, `expires_at`, `remaining_balance` per parametri eventi gift card.
-- Mapping Meta Purchase per `gift_card_redeemed` (evento con value).
+### Fixed
+- BrevoMapper: supporto `user_data.email` come fallback oltre a `user_data.em` per identificazione contatto negli eventi.
 
 ## [1.2.17] - 2026-03-23
 ### Added

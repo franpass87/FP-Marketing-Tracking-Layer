@@ -31,6 +31,8 @@ final class BrevoMapper {
         $email = '';
         if (isset($userData['em']) && is_string($userData['em'])) {
             $email = sanitize_email($userData['em']);
+        } elseif (isset($userData['email']) && is_string($userData['email'])) {
+            $email = sanitize_email($userData['email']);
         } elseif (isset($params['email'])) {
             $email = sanitize_email((string) $params['email']);
         }
