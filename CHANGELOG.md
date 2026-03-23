@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.21] - 2026-03-23
+
+### Changed
+
+- Admin: link rapidi admin bar e body class `fptracking-admin-shell` (pattern FP-Experiences).
+
 ## [1.2.20] - 2026-03-23
 ### Fixed
 - Integrazioni: rilevamento automatico plugin FP attivi (Forms, Restaurant, Experiences, CTA Bar, Discount-Gift, Bio) tramite costanti/defined. Nessun plugin implementava il filtro `fp_tracking_registered_integrations`.
