@@ -23,6 +23,10 @@ final class DataLayerManager {
     private const UTM_PARAMS = [
         'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
         'gclid', 'fbclid', 'msclkid', 'ttclid',
+        'wbraid', 'gbraid',
+        'utm_id', 'utm_source_platform', 'utm_campaign_id',
+        'utm_creative_format', 'utm_marketing_tactic',
+        '_fbc', '_fbp',
     ];
 
     public function __construct(private readonly Settings $settings) {

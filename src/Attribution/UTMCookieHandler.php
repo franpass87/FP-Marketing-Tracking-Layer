@@ -18,6 +18,7 @@ final class UTMCookieHandler {
 
     private const COOKIE_NAME = 'fp_tracking_utm';
 
+    /** Standard UTM + click IDs + GA4 extended + Meta. */
     private const UTM_PARAMS = [
         'utm_source',
         'utm_medium',
@@ -28,6 +29,15 @@ final class UTMCookieHandler {
         'fbclid',
         'msclkid',
         'ttclid',
+        'wbraid',
+        'gbraid',
+        'utm_id',
+        'utm_source_platform',
+        'utm_campaign_id',
+        'utm_creative_format',
+        'utm_marketing_tactic',
+        '_fbc',
+        '_fbp',
     ];
 
     public function __construct(private readonly Settings $settings) {}

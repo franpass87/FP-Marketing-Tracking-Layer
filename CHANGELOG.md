@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.3.2] - 2026-03-23
+### Added
+- UTM estesi: wbraid, gbraid (Google iOS 14+), utm_id, utm_source_platform, utm_campaign_id, utm_creative_format, utm_marketing_tactic (GA4), _fbc, _fbp (Meta) — cattura e iniezione negli eventi.
+
 ## [1.3.1] - 2026-03-23
 ### Added
 - UTM attribution: parametri UTM (utm_source, utm_medium, utm_campaign, utm_term, utm_content) e click ID (gclid, fbclid, msclkid, ttclid) dal cookie `fp_tracking_utm` vengono ora iniettati automaticamente in tutti gli eventi inviati a GA4 MP, Meta CAPI e Brevo, per attribuzione campagna sulle conversioni.
