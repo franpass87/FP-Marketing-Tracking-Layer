@@ -98,6 +98,36 @@ final class Settings {
     }
 
     /**
+     * Rileva i plugin FP attivi che inviano eventi al tracking layer.
+     *
+     * @return array<string, bool> Chiave = nome plugin, valore = attivo (sempre true se rilevato)
+     */
+    private function detect_fp_integrations(): array {
+        $detected = [];
+
+        if (defined('FP_FORMS_PLUGIN_FILE') || defined('FP_FORMS_VERSION')) {
+            $detected['FP Forms'] = true;
+        }
+        if (defined('FP_RESV_FILE') || defined('FP_RESV_DIR')) {
+            $detected['FP Restaurant Reservations'] = true;
+        }
+        if (defined('FP_EXP_PLUGIN_FILE') || defined('FP_EXP_VERSION')) {
+            $detected['FP Experiences'] = true;
+        }
+        if (defined('FP_CTA_BAR_FILE') || defined('FP_CTA_BAR_VERSION')) {
+            $detected['FP CTA Bar'] = true;
+        }
+        if (defined('FP_DISCOUNTGIFT_FILE') || defined('FP_DISCOUNTGIFT_VERSION')) {
+            $detected['FP Discount-Gift'] = true;
+        }
+        if (defined('FP_BIO_STANDALONE_VERSION') || defined('FP_BIO_STANDALONE_PLUGIN_DIR')) {
+            $detected['FP Bio Standalone'] = true;
+        }
+
+        return $detected;
+    }
+
+    /**
      * Builds a consistency report for the central event catalog.
      *
      * @return array{
@@ -573,7 +603,7 @@ final class Settings {
         $meta_ok      = !empty($this->get('meta_pixel_id')) && !empty($this->get('meta_access_token'));
         $brevo_ok     = !empty($this->get('brevo_enabled')) && !empty($this->get('brevo_api_key'));
         $ads_ok       = !empty($this->get('google_ads_id'));
-        $integrations = apply_filters('fp_tracking_registered_integrations', []);
+        $integrations = apply_filters('fp_tracking_registered_integrations', $this->detect_fp_integrations());
         $validator    = new EventValidator();
         $warnings     = $validator->get_recent_warnings(10);
         $inspector    = new EventInspector();

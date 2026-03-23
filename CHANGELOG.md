@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.20] - 2026-03-23
+### Fixed
+- Integrazioni: rilevamento automatico plugin FP attivi (Forms, Restaurant, Experiences, CTA Bar, Discount-Gift, Bio) tramite costanti/defined. Nessun plugin implementava il filtro `fp_tracking_registered_integrations`.
+
 ## [1.2.19] - 2026-03-23
 ### Changed
 - Admin: sezione Brevo estratta da Impostazioni Avanzate e collocata in una card dedicata con badge stato.
