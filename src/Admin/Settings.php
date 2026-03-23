@@ -228,8 +228,6 @@ final class Settings {
         $this->queue = $queue;
         $this->healthService = $healthService;
         add_action('admin_menu', [$this, 'add_menu_page']);
-        add_action('admin_bar_menu', [$this, 'register_admin_bar_links'], 80);
-        add_filter('admin_body_class', [$this, 'add_admin_body_class']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
         add_action('admin_post_fp_tracking_export_gtm', [$this, 'handle_gtm_export']);
@@ -253,39 +251,6 @@ final class Settings {
             'dashicons-chart-line',
             58
         );
-    }
-
-    /**
-     * Link rapidi nella admin bar.
-     */
-    public function register_admin_bar_links(\WP_Admin_Bar $admin_bar): void {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-        $screen = get_current_screen();
-        $screen_id = $screen ? ($screen->id ?? '') : '';
-        $is_plugin = strpos($screen_id, 'fp-tracking') !== false;
-        $admin_bar->add_node([
-            'id'    => 'fp-tracking',
-            'title' => __('FP Tracking', 'fp-tracking'),
-            'href'  => admin_url('admin.php?page=fp-tracking'),
-            'meta'  => $is_plugin ? ['aria-current' => 'page'] : [],
-        ]);
-    }
-
-    /**
-     * Aggiunge classe body per pagine del plugin.
-     */
-    public function add_admin_body_class(string $classes): string {
-        $screen = get_current_screen();
-        if (!$screen) {
-            return $classes;
-        }
-        $screen_id = $screen->id ?? '';
-        if (strpos($screen_id, 'fp-tracking') !== false && strpos($classes, 'fptracking-admin-shell') === false) {
-            $classes .= ' fptracking-admin-shell';
-        }
-        return $classes;
     }
 
     public function register_settings(): void {
