@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -19,7 +19,7 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 - **GA4 Measurement Protocol**: invio eventi server-side a Google Analytics 4
 - **Meta Conversions API**: invio eventi server-side a Meta (Facebook/Instagram)
 - **Brevo Event Bridge**: invio eventi server-side a Brevo Events API v3 (`/v3/events`) (opzionale)
-- **UTM Cookie Handler**: salvataggio e lettura parametri UTM per attribuzione
+- **UTM Cookie Handler**: salvataggio parametri UTM in cookie e iniezione automatica negli eventi (GA4, Meta, Brevo) per attribuzione campagna
 - **Queue affidabile**: coda persistente con retry/backoff, replay e health metrics
 - **Rule Engine + Inspector**: regole no-code eventi, validator e audit operativo
 - **Catalogo eventi centralizzato**: sorgente unica per eventi, mapping Meta, required fields e server-side eligibility

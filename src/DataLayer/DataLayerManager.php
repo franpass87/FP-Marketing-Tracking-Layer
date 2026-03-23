@@ -3,6 +3,7 @@
 namespace FPTracking\DataLayer;
 
 use FPTracking\Admin\Settings;
+use FPTracking\Attribution\UTMCookieHandler;
 use FPTracking\Catalog\EventCatalog;
 use FPTracking\Inspector\EventInspector;
 use FPTracking\Rules\EventRuleEngine;
@@ -18,6 +19,12 @@ final class DataLayerManager {
     private EventValidator $validator;
     private EventInspector $inspector;
 
+    /** UTM/attribution params to inject from cookie (for GA4, Meta, Brevo). */
+    private const UTM_PARAMS = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'gclid', 'fbclid', 'msclkid', 'ttclid',
+    ];
+
     public function __construct(private readonly Settings $settings) {
         $this->schema = new EventSchema();
         $this->ruleEngine = new EventRuleEngine();
@@ -29,6 +36,7 @@ final class DataLayerManager {
      * Called by add_action('fp_tracking_event', ...).
      * Normalizes the event and adds it to the page queue.
      * Also triggers server-side dispatch for eligible events.
+     * UTM params from cookie are merged into events for attribution (GA4, Meta, Brevo).
      *
      * @param string $event_name
      * @param array  $params
@@ -40,6 +48,10 @@ final class DataLayerManager {
         }
         $event_name = $ruleResult['event_name'];
         $params = $ruleResult['params'];
+
+        // Merge UTM attribution from cookie (captured on landing) into params.
+        // Ensures GA4, Meta, Brevo receive campaign data for conversions.
+        $params = $this->merge_utm_attribution($params);
 
         // Ensure event_id exists before building the payload.
         // The same ID is used for both the dataLayer push (→ GTM → fbq eventID)
@@ -113,5 +125,30 @@ final class DataLayerManager {
     private function is_server_side_event(string $event_name): bool {
         return in_array($event_name, EventCatalog::SERVER_SIDE_EVENTS, true)
             && apply_filters('fp_tracking_server_side_enabled', true, $event_name);
+    }
+
+    /**
+     * Merges UTM attribution from cookie into params.
+     * Only adds params not already set (caller override wins).
+     * Used for GA4, Meta CAPI and Brevo campaign attribution.
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    private function merge_utm_attribution(array $params): array {
+        $attribution = UTMCookieHandler::get_current_attribution();
+        if ($attribution === []) {
+            return $params;
+        }
+
+        foreach (self::UTM_PARAMS as $param) {
+            if (isset($attribution[$param]) && $attribution[$param] !== ''
+                && !isset($params[$param])
+            ) {
+                $params[$param] = sanitize_text_field((string) $attribution[$param]);
+            }
+        }
+
+        return apply_filters('fp_tracking_params_with_attribution', $params, $attribution);
     }
 }

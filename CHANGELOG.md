@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.3.1] - 2026-03-23
+### Added
+- UTM attribution: parametri UTM (utm_source, utm_medium, utm_campaign, utm_term, utm_content) e click ID (gclid, fbclid, msclkid, ttclid) dal cookie `fp_tracking_utm` vengono ora iniettati automaticamente in tutti gli eventi inviati a GA4 MP, Meta CAPI e Brevo, per attribuzione campagna sulle conversioni.
+- Filtro `fp_tracking_params_with_attribution` per personalizzare i parametri dopo il merge UTM.
+
 ## [1.3.0] - 2026-03-23
 ### Added
 - `cart_abandoned`: evento FP-Cart-Recovery instradato verso GA4 MP, Meta CAPI (CartAbandoned), Google Ads e Brevo
