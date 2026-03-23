@@ -79,7 +79,7 @@ final class GA4MeasurementProtocol {
         ]);
 
         if (is_wp_error($response)) {
-            if ($this->settings->get('debug_mode', false)) {
+            if (defined('WP_DEBUG') && WP_DEBUG && $this->settings->get('debug_mode', false) && function_exists('error_log')) {
                 error_log('[FP Tracking] GA4 MP error: ' . $response->get_error_message());
             }
             return false;

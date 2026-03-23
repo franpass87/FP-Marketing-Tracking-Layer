@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.20] - 2026-03-22
+### Fixed
+- `error_log` GA4 Measurement Protocol condizionato anche a WP_DEBUG oltre a debug_mode (no-debug-in-production).
+
 ## [1.2.19] - 2026-03-23
 ### Added
 - Google Ads conversion: `gift_voucher_purchased` e `gift_card_redeemed` in ADS_EVENTS (tag awct con value/currency).
