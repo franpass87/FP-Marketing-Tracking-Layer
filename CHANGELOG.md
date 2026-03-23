@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.21] - 2026-03-23
+### Changed
+- Menu position 56.6 per ordine alfabetico FP.
+
 ## [1.2.20] - 2026-03-23
 ### Fixed
 - Integrazioni: rilevamento automatico plugin FP attivi (Forms, Restaurant, Experiences, CTA Bar, Discount-Gift, Bio) tramite costanti/defined. Nessun plugin implementava il filtro `fp_tracking_registered_integrations`.

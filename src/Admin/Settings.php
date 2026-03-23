@@ -58,10 +58,14 @@ final class Settings {
         'experience_paid'           => 'Experience Paid (Experiences)',
         'rtb_approved'              => 'RTB Approved (Experiences)',
         'gift_purchased'            => 'Gift Purchased (Experiences)',
+        'gift_voucher_purchased'    => 'Gift Voucher Purchased (Discount-Gift)',
+        'gift_card_redeemed'        => 'Gift Card Redeemed (Discount-Gift)',
         // Lead / Micro-conversioni
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',
         'form_payment_started'      => 'Form Payment Started (Forms)',
+        'discount_applied'          => 'Discount Applied (Discount-Gift)',
+        'gift_card_applied'         => 'Gift Card Applied (Discount-Gift)',
         // Contact click
         'click_phone'               => 'Phone Click',
         'click_email'               => 'Email Click',
@@ -249,7 +253,7 @@ final class Settings {
             'fp-tracking',
             [$this, 'render_page'],
             'dashicons-chart-line',
-            58
+            '56.6'
         );
     }
 
