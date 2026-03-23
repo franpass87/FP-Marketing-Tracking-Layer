@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.19] - 2026-03-23
+### Changed
+- Admin: sezione Brevo estratta da Impostazioni Avanzate e collocata in una card dedicata con badge stato.
+
 ## [1.2.18] - 2026-03-23
 ### Fixed
 - BrevoMapper: supporto `user_data.email` come fallback oltre a `user_data.em` per identificazione contatto negli eventi.

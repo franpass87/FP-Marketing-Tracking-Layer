@@ -58,8 +58,6 @@ final class Settings {
         'experience_paid'           => 'Experience Paid (Experiences)',
         'rtb_approved'              => 'RTB Approved (Experiences)',
         'gift_purchased'            => 'Gift Purchased (Experiences)',
-        'gift_voucher_purchased'    => 'Gift Voucher Purchased (Discount/Gift)',
-        'gift_card_redeemed'        => 'Gift Card Redeemed (Discount/Gift)',
         // Lead / Micro-conversioni
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',
@@ -980,50 +978,19 @@ final class Settings {
                     </div>
                 </div>
 
-                <!-- Card: Impostazioni avanzate -->
+                <!-- Card: Brevo -->
                 <div class="fptracking-card fptracking-card-collapsible">
                     <div class="fptracking-card-header">
                         <div class="fptracking-card-header-left">
-                            <span class="dashicons dashicons-admin-settings"></span>
-                            <h2><?php esc_html_e('Impostazioni Avanzate', 'fp-tracking'); ?></h2>
+                            <span class="dashicons dashicons-email-alt"></span>
+                            <h2><?php esc_html_e('Brevo', 'fp-tracking'); ?></h2>
                         </div>
+                        <span class="fptracking-badge <?php echo $brevo_ok ? 'fptracking-badge-success' : 'fptracking-badge-neutral'; ?>">
+                            <?php echo $brevo_ok ? '&#10003; ' . esc_html__('Attivo', 'fp-tracking') : esc_html__('Non configurato', 'fp-tracking'); ?>
+                        </span>
                     </div>
                     <div class="fptracking-card-body">
-                        <p class="description"><?php esc_html_e('Cookie UTM per attribuzione, stato default del consenso (GDPR), attivazione canali server-side (GA4, Meta, Brevo) e opzioni di debug.', 'fp-tracking'); ?></p>
-                        <div class="fptracking-fields-grid fptracking-fields-grid-bottom-gap">
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Durata cookie UTM (giorni)', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('utm_cookie_days', 'number', '90', []); ?>
-                                <span class="fptracking-hint"><?php esc_html_e('Per quanto tempo mantenere i parametri UTM in cookie per l\'attribuzione', 'fp-tracking'); ?></span>
-                            </div>
-                            <div class="fptracking-field">
-                                <label><?php esc_html_e('Consent Mode — stato default', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('consent_default', 'select', '', ['denied' => 'Denied (GDPR — raccomandato)', 'granted' => 'Granted']); ?>
-                                <span class="fptracking-hint"><?php esc_html_e('Stato iniziale prima che l\'utente esprima il consenso. Usa "Denied" per conformità GDPR.', 'fp-tracking'); ?></span>
-                            </div>
-                        </div>
-
-                        <p class="fptracking-section-title"><?php esc_html_e('Canali Server-Side', 'fp-tracking'); ?></p>
-                        <div class="fptracking-toggle-row">
-                            <div class="fptracking-toggle-info">
-                                <strong><?php esc_html_e('GA4 Measurement Protocol', 'fp-tracking'); ?></strong>
-                                <span><?php esc_html_e('Invia eventi di conversione a GA4 lato server (richiede Measurement ID + API Secret)', 'fp-tracking'); ?></span>
-                            </div>
-                            <label class="fptracking-toggle">
-                                <?php $this->render_field('server_side_ga4', 'checkbox', '', []); ?>
-                                <span class="fptracking-toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="fptracking-toggle-row">
-                            <div class="fptracking-toggle-info">
-                                <strong><?php esc_html_e('Meta Conversions API (CAPI)', 'fp-tracking'); ?></strong>
-                                <span><?php esc_html_e('Invia eventi a Meta lato server per recuperare conversioni perse da iOS/ad-blocker (richiede Pixel ID + Access Token)', 'fp-tracking'); ?></span>
-                            </div>
-                            <label class="fptracking-toggle">
-                                <?php $this->render_field('server_side_meta', 'checkbox', '', []); ?>
-                                <span class="fptracking-toggle-slider"></span>
-                            </label>
-                        </div>
+                        <p class="description"><?php esc_html_e('Configurazione centralizzata per Brevo: Events API v3, API Key e liste default ITA/ENG. Usata da Forms, Restaurant, Experiences e altri plugin FP.', 'fp-tracking'); ?></p>
                         <div class="fptracking-toggle-row">
                             <div class="fptracking-toggle-info">
                                 <strong><?php esc_html_e('Brevo Server-Side', 'fp-tracking'); ?></strong>
@@ -1065,6 +1032,55 @@ final class Settings {
                                 </button>
                                 <div id="fp-tracking-brevo-test-result" style="margin-top:8px;"></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: Impostazioni avanzate -->
+                <div class="fptracking-card fptracking-card-collapsible">
+                    <div class="fptracking-card-header">
+                        <div class="fptracking-card-header-left">
+                            <span class="dashicons dashicons-admin-settings"></span>
+                            <h2><?php esc_html_e('Impostazioni Avanzate', 'fp-tracking'); ?></h2>
+                        </div>
+                    </div>
+                    <div class="fptracking-card-body">
+                        <p class="description"><?php esc_html_e('Cookie UTM per attribuzione, stato default del consenso (GDPR), attivazione canali server-side (GA4, Meta) e opzioni di debug.', 'fp-tracking'); ?></p>
+                        <div class="fptracking-fields-grid fptracking-fields-grid-bottom-gap">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Durata cookie UTM (giorni)', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('utm_cookie_days', 'number', '90', []); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Per quanto tempo mantenere i parametri UTM in cookie per l\'attribuzione', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Consent Mode — stato default', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('consent_default', 'select', '', ['denied' => 'Denied (GDPR — raccomandato)', 'granted' => 'Granted']); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Stato iniziale prima che l\'utente esprima il consenso. Usa "Denied" per conformità GDPR.', 'fp-tracking'); ?></span>
+                            </div>
+                        </div>
+
+                        <p class="fptracking-section-title"><?php esc_html_e('Canali Server-Side', 'fp-tracking'); ?></p>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('GA4 Measurement Protocol', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Invia eventi di conversione a GA4 lato server (richiede Measurement ID + API Secret)', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('server_side_ga4', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="fptracking-toggle-row">
+                            <div class="fptracking-toggle-info">
+                                <strong><?php esc_html_e('Meta Conversions API (CAPI)', 'fp-tracking'); ?></strong>
+                                <span><?php esc_html_e('Invia eventi a Meta lato server per recuperare conversioni perse da iOS/ad-blocker (richiede Pixel ID + Access Token)', 'fp-tracking'); ?></span>
+                            </div>
+                            <label class="fptracking-toggle">
+                                <?php $this->render_field('server_side_meta', 'checkbox', '', []); ?>
+                                <span class="fptracking-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="fptracking-fields-grid fptracking-fields-grid-top-gap">
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Inspector Sample Rate (%)', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('inspector_sample_rate', 'number', '10', []); ?>
