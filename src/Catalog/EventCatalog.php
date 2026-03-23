@@ -23,6 +23,7 @@ final class EventCatalog
         // WooCommerce
         'view_item'              => ['label' => 'View Item',              'type' => 'ga4'],
         'add_to_cart'            => ['label' => 'Add to Cart',            'type' => 'ga4+meta+ads'],
+        'cart_abandoned'         => ['label' => 'Cart Abandoned',         'type' => 'ga4+meta+ads'],
         'begin_checkout'         => ['label' => 'Begin Checkout',         'type' => 'ga4+meta'],
         'purchase'               => ['label' => 'Purchase',               'type' => 'ga4+meta+ads'],
 
@@ -137,6 +138,7 @@ final class EventCatalog
         'experience_checkout_started' => 'InitiateCheckout',
         'form_payment_started'        => 'InitiateCheckout',
         'add_to_cart'                 => 'AddToCart',
+        'cart_abandoned'              => 'CartAbandoned',
         'generate_lead'               => 'Lead',
         'rtb_submitted'               => 'Lead',
         'click_phone'                 => 'Contact',
@@ -152,6 +154,7 @@ final class EventCatalog
     public const SERVER_SIDE_EVENTS = [
         'purchase',
         'add_to_cart',
+        'cart_abandoned',
         'begin_checkout',
         'booking_confirmed',
         'booking_submitted',
@@ -202,6 +205,7 @@ final class EventCatalog
     public const REQUIRED_FIELDS = [
         'purchase'               => ['transaction_id', 'value', 'currency'],
         'add_to_cart'            => ['value', 'currency'],
+        'cart_abandoned'         => ['value', 'currency'],
         'begin_checkout'         => ['value', 'currency'],
         'booking_confirmed'      => ['value', 'currency'],
         'booking_payment_completed' => ['value', 'currency'],

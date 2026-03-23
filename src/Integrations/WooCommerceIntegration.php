@@ -95,11 +95,23 @@ final class WooCommerceIntegration {
 
         $item = $this->product_to_item($product, $quantity);
 
-        do_action('fp_tracking_event', 'add_to_cart', [
+        $params = [
             'value'    => (float) $product->get_price() * $quantity,
             'currency' => get_woocommerce_currency(),
             'items'    => [$item],
-        ]);
+        ];
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            $user = get_userdata($user_id);
+            if ($user instanceof \WP_User) {
+                $params['user_data'] = [
+                    'em' => $user->user_email,
+                    'fn' => $user->first_name ?? '',
+                    'ln' => $user->last_name ?? '',
+                ];
+            }
+        }
+        do_action('fp_tracking_event', 'add_to_cart', $params);
     }
 
     public function track_view_cart(): void {

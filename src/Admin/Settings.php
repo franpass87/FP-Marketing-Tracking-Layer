@@ -50,6 +50,9 @@ final class Settings {
      * Key = FP event name, value = human label shown in admin.
      */
     public const ADS_EVENTS = [
+        // Ecommerce funnel (add to cart, cart abandoned)
+        'add_to_cart'               => 'Add to Cart (WooCommerce)',
+        'cart_abandoned'            => 'Cart Abandoned (Cart Recovery)',
         // Revenue diretta
         'purchase'                  => 'Purchase (WooCommerce)',
         'event_ticket_purchase'     => 'Event Ticket Purchase (Restaurant)',

@@ -371,7 +371,7 @@ final class GTMExporter {
                     'booking_confirmed', 'booking_payment_completed',
                     'experience_paid', 'rtb_approved', 'gift_purchased',
                     'gift_voucher_purchased', 'gift_card_redeemed',
-                    'add_to_cart', 'begin_checkout', 'form_payment_started',
+                    'add_to_cart', 'cart_abandoned', 'begin_checkout', 'form_payment_started',
                 ];
                 $value_param = in_array($fp_event, $events_with_value, true)
                     ? "fbq('track', '" . $meta_event . "', {value: {{" . $variables['value']['name'] . "}}, currency: {{" . $variables['currency']['name'] . "}} || 'EUR', eventID: {{" . $variables['event_id']['name'] . "}}});"

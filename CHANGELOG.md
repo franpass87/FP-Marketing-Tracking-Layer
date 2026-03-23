@@ -2,6 +2,15 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.3.0] - 2026-03-23
+### Added
+- `cart_abandoned`: evento FP-Cart-Recovery instradato verso GA4 MP, Meta CAPI (CartAbandoned), Google Ads e Brevo
+- `add_to_cart` e `cart_abandoned` aggiunti a ADS_EVENTS per conversioni Google Ads
+- `user_data` (email, nome, cognome) su add_to_cart per utenti loggati → Brevo identificazione contatto
+### Changed
+- ServerSideDispatcher: contents Meta per cart_abandoned (stessi prodotti di add_to_cart)
+- GTMExporter: cart_abandoned in events_with_value per tag Meta con value/currency
+
 ## [1.2.21] - 2026-03-23
 ### Changed
 - Menu position 56.6 per ordine alfabetico FP.

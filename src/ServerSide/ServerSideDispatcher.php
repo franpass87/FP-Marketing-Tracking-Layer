@@ -158,8 +158,8 @@ final class ServerSideDispatcher {
             $custom['content_type'] = 'product';
         }
 
-        // Cart event
-        if ($event_name === 'add_to_cart' && !empty($params['items'])) {
+        // Cart events (add_to_cart, cart_abandoned)
+        if (in_array($event_name, ['add_to_cart', 'cart_abandoned'], true) && !empty($params['items'])) {
             $custom['contents'] = array_map(static function (array $item): array {
                 return [
                     'id'       => (string) ($item['item_id'] ?? ''),
