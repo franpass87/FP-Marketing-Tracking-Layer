@@ -2,6 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.23] - 2026-03-24
+### Fixed
+- Impostazioni: se Brevo API Key (e segreti GA4/Meta) arrivano vuoti al salvataggio, viene mantenuto il valore precedente — evita 401 "Key not found" dopo aver salvato senza reinserire la chiave.
+
 ## [1.2.22] - 2026-03-24
 ### Fixed
 - Brevo: normalizzazione API key (trim spazi e virgolette) per test connessione e invio eventi.

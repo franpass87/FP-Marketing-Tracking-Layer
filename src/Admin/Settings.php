@@ -355,11 +355,15 @@ final class Settings {
                 'brevo_list_id_bio_en',
             ], true) ? ' is-monospace' : '';
             $id_attr = $input_id !== '' ? ' id="' . esc_attr($input_id) . '"' : '';
+            $extra_attrs = '';
+            if ($key === 'brevo_api_key') {
+                $extra_attrs = ' autocomplete="off" autocapitalize="off" spellcheck="false"';
+            }
 
             if ($with_copy && $input_id !== '') {
                 echo '<span class="fptracking-field-copy-wrap">';
             }
-            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '"' . $id_attr . ' data-fptracking-copyable>';
+            echo '<input type="' . esc_attr($type) . '" name="' . esc_attr($name) . '" value="' . esc_attr((string) $value) . '" placeholder="' . esc_attr($placeholder) . '" class="regular-text' . $mono . '"' . $id_attr . $extra_attrs . ' data-fptracking-copyable>';
             if ($with_copy && $input_id !== '') {
                 echo '<button type="button" class="fptracking-btn-copy" data-fptracking-copy-for="' . esc_attr($input_id) . '" aria-label="' . esc_attr__('Copia negli appunti', 'fp-tracking') . '" title="' . esc_attr__('Copia negli appunti', 'fp-tracking') . '">';
                 echo '<span class="dashicons dashicons-admin-page"></span>';
@@ -373,20 +377,33 @@ final class Settings {
         if (!is_array($input)) {
             return self::DEFAULTS;
         }
+        $previous = get_option(self::OPTION_KEY, []);
+        $previous = is_array($previous) ? $previous : [];
+
         $clean = [];
         $clean['gtm_id']             = sanitize_text_field($input['gtm_id'] ?? '');
         $clean['ga4_measurement_id'] = sanitize_text_field($input['ga4_measurement_id'] ?? '');
         $clean['ga4_api_secret']     = sanitize_text_field($input['ga4_api_secret'] ?? '');
+        if ($clean['ga4_api_secret'] === '' && isset($previous['ga4_api_secret']) && (string) $previous['ga4_api_secret'] !== '') {
+            $clean['ga4_api_secret'] = sanitize_text_field((string) $previous['ga4_api_secret']);
+        }
         $clean['google_ads_id']      = sanitize_text_field($input['google_ads_id'] ?? '');
         $clean['meta_pixel_id']      = sanitize_text_field($input['meta_pixel_id'] ?? '');
         $clean['meta_access_token']  = sanitize_text_field($input['meta_access_token'] ?? '');
+        if ($clean['meta_access_token'] === '' && isset($previous['meta_access_token']) && (string) $previous['meta_access_token'] !== '') {
+            $clean['meta_access_token'] = sanitize_text_field((string) $previous['meta_access_token']);
+        }
         $clean['clarity_project_id'] = sanitize_text_field($input['clarity_project_id'] ?? '');
         $clean['utm_cookie_days']    = max(1, (int) ($input['utm_cookie_days'] ?? 90));
         $clean['consent_default']    = in_array($input['consent_default'] ?? '', ['denied', 'granted'], true) ? $input['consent_default'] : 'denied';
         $clean['server_side_ga4']    = !empty($input['server_side_ga4']);
         $clean['server_side_meta']   = !empty($input['server_side_meta']);
         $clean['brevo_enabled']      = !empty($input['brevo_enabled']);
-        $clean['brevo_api_key']      = sanitize_text_field($input['brevo_api_key'] ?? '');
+        $clean['brevo_api_key']      = sanitize_text_field((string) ($input['brevo_api_key'] ?? ''));
+        // Campi password: se il POST è vuoto (browser/plugin o "Salva" senza reinserire), mantieni la chiave già salvata.
+        if ($clean['brevo_api_key'] === '' && isset($previous['brevo_api_key']) && (string) $previous['brevo_api_key'] !== '') {
+            $clean['brevo_api_key'] = sanitize_text_field((string) $previous['brevo_api_key']);
+        }
         $clean['brevo_endpoint']     = esc_url_raw($input['brevo_endpoint'] ?? 'https://api.brevo.com/v3/events');
         $clean['brevo_list_id_it']   = absint($input['brevo_list_id_it'] ?? 0) ?: '';
         $clean['brevo_list_id_en']   = absint($input['brevo_list_id_en'] ?? 0) ?: '';
@@ -1096,9 +1113,9 @@ final class Settings {
                         </div>
                         <div class="fptracking-fields-grid fptracking-fields-grid-top-gap">
                             <div class="fptracking-field">
-                                <label><?php esc_html_e('Brevo API Key', 'fp-tracking'); ?></label>
-                                <?php $this->render_field('brevo_api_key', 'password', '', []); ?>
-                                <span class="fptracking-hint"><?php esc_html_e('Usata per Events API, Contacts API e dagli altri plugin FP (Forms, Restaurant, Experiences).', 'fp-tracking'); ?></span>
+                                <label for="fp_tracking_brevo_api_key"><?php esc_html_e('Brevo API Key', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_api_key', 'password', '', [], false, 'fp_tracking_brevo_api_key'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Usata per Events API, Contacts API e dagli altri plugin FP (Forms, Restaurant, Experiences). Se salvi le impostazioni lasciando questo campo vuoto, viene mantenuta la chiave già salvata (evita 401 dopo un salvataggio).', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Brevo Endpoint', 'fp-tracking'); ?></label>
