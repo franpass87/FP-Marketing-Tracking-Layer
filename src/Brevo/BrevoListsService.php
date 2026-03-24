@@ -22,7 +22,7 @@ final class BrevoListsService {
      * Verifica se Brevo è configurato (API key presente).
      */
     public function is_configured(): bool {
-        $key = (string) $this->settings->get('brevo_api_key', '');
+        $key = self::normalize_api_key((string) $this->settings->get('brevo_api_key', ''));
         return $key !== '';
     }
 
@@ -41,7 +41,14 @@ final class BrevoListsService {
         }
 
         $url = self::API_BASE . '/contacts/lists';
-        $apiKey = (string) $this->settings->get('brevo_api_key', '');
+        $apiKey = self::normalize_api_key((string) $this->settings->get('brevo_api_key', ''));
+        if ($apiKey === '') {
+            return [
+                'success' => false,
+                'lists' => [],
+                'error' => __('Brevo API Key vuota o non valida (spazi/virgolette).', 'fp-tracking'),
+            ];
+        }
 
         $response = wp_remote_get($url, [
             'headers' => [
@@ -82,6 +89,9 @@ final class BrevoListsService {
         }
 
         $errorMsg = is_array($decoded) ? ($decoded['message'] ?? $decoded['code'] ?? '') : '';
+        if ($code === 401) {
+            $errorMsg = __('Key not found. Usa una API key Brevo valida da SMTP & API > API Keys (non SMTP relay password).', 'fp-tracking');
+        }
         return [
             'success' => false,
             'lists' => [],
@@ -104,7 +114,14 @@ final class BrevoListsService {
         }
 
         $url = self::API_BASE . '/account';
-        $apiKey = (string) $this->settings->get('brevo_api_key', '');
+        $apiKey = self::normalize_api_key((string) $this->settings->get('brevo_api_key', ''));
+        if ($apiKey === '') {
+            return [
+                'success' => false,
+                'message' => __('Brevo API Key vuota o non valida (spazi/virgolette).', 'fp-tracking'),
+                'account' => null,
+            ];
+        }
 
         $response = wp_remote_get($url, [
             'headers' => [
@@ -155,10 +172,21 @@ final class BrevoListsService {
                 $errorMsg = __('Risposta Brevo vuota o non valida.', 'fp-tracking');
             }
         }
+        if ($code === 401) {
+            $errorMsg = __('Key not found. Verifica di aver copiato una API key Brevo attiva (SMTP & API > API Keys) senza spazi o virgolette.', 'fp-tracking');
+        }
         return [
             'success' => false,
             'message' => sprintf('HTTP %d: %s', $code, $errorMsg ?: $body),
             'account' => null,
         ];
+    }
+
+    /**
+     * Normalizza la API key rimuovendo spazi e virgolette accidentali.
+     */
+    private static function normalize_api_key(string $apiKey): string {
+        $normalized = trim($apiKey);
+        return trim($normalized, "\"' \t\n\r\0\x0B");
     }
 }

@@ -2,23 +2,10 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
-## [1.3.2] - 2026-03-23
-### Added
-- UTM estesi: wbraid, gbraid (Google iOS 14+), utm_id, utm_source_platform, utm_campaign_id, utm_creative_format, utm_marketing_tactic (GA4), _fbc, _fbp (Meta) — cattura e iniezione negli eventi.
-
-## [1.3.1] - 2026-03-23
-### Added
-- UTM attribution: parametri UTM (utm_source, utm_medium, utm_campaign, utm_term, utm_content) e click ID (gclid, fbclid, msclkid, ttclid) dal cookie `fp_tracking_utm` vengono ora iniettati automaticamente in tutti gli eventi inviati a GA4 MP, Meta CAPI e Brevo, per attribuzione campagna sulle conversioni.
-- Filtro `fp_tracking_params_with_attribution` per personalizzare i parametri dopo il merge UTM.
-
-## [1.3.0] - 2026-03-23
-### Added
-- `cart_abandoned`: evento FP-Cart-Recovery instradato verso GA4 MP, Meta CAPI (CartAbandoned), Google Ads e Brevo
-- `add_to_cart` e `cart_abandoned` aggiunti a ADS_EVENTS per conversioni Google Ads
-- `user_data` (email, nome, cognome) su add_to_cart per utenti loggati → Brevo identificazione contatto
-### Changed
-- ServerSideDispatcher: contents Meta per cart_abandoned (stessi prodotti di add_to_cart)
-- GTMExporter: cart_abandoned in events_with_value per tag Meta con value/currency
+## [1.2.22] - 2026-03-24
+### Fixed
+- Brevo: normalizzazione API key (trim spazi e virgolette) per test connessione e invio eventi.
+- Brevo: messaggio HTTP 401 più esplicito (API key da SMTP & API > API Keys).
 
 ## [1.2.21] - 2026-03-23
 ### Changed

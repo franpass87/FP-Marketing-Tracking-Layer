@@ -12,7 +12,7 @@ final class BrevoClient {
 
     public function is_enabled(): bool {
         return (bool) $this->settings->get('brevo_enabled', false)
-            && !empty($this->settings->get('brevo_api_key', ''));
+            && self::normalize_api_key((string) $this->settings->get('brevo_api_key', '')) !== '';
     }
 
     /**
@@ -31,7 +31,10 @@ final class BrevoClient {
         }
 
         $endpoint = (string) $this->settings->get('brevo_endpoint', 'https://api.brevo.com/v3/events');
-        $apiKey = (string) $this->settings->get('brevo_api_key', '');
+        $apiKey = self::normalize_api_key((string) $this->settings->get('brevo_api_key', ''));
+        if ($apiKey === '') {
+            return false;
+        }
 
         $body = [
             'event_name' => $event_name,
@@ -57,6 +60,14 @@ final class BrevoClient {
         }
         $code = (int) wp_remote_retrieve_response_code($response);
         return $code >= 200 && $code < 300;
+    }
+
+    /**
+     * Normalizza la API key rimuovendo spazi e virgolette accidentali.
+     */
+    private static function normalize_api_key(string $apiKey): string {
+        $normalized = trim($apiKey);
+        return trim($normalized, "\"' \t\n\r\0\x0B");
     }
 }
 
