@@ -198,6 +198,7 @@ final class WordPressIntegration {
             'value'          => (float) ($data['value'] ?? 0),
             'currency'       => (string) ($data['currency'] ?? 'EUR'),
             'event_id'       => 'rtb_' . $reservation_id . '_' . time(),
+            'fp_source'      => 'experiences',
             'user_data'      => array_filter((array) ($data['contact'] ?? [])),
         ]);
     }
@@ -218,6 +219,7 @@ final class WordPressIntegration {
             'currency'         => (string) ($totals['currency'] ?? 'EUR'),
             'approval_mode'    => $mode,
             'event_id'         => 'rtb_approved_' . $reservation_id . '_' . time(),
+            'fp_source'        => 'experiences',
         ]);
     }
 
@@ -236,6 +238,7 @@ final class WordPressIntegration {
             'value'          => $value,
             'currency'       => $currency,
             'event_id'       => 'gift_' . $voucher_id . '_' . time(),
+            'fp_source'      => 'experiences',
         ]);
     }
 
@@ -255,6 +258,7 @@ final class WordPressIntegration {
             'value'          => $value,
             'currency'       => $currency,
             'event_id'       => 'exp_paid_' . $reservation_id . '_' . time(),
+            'fp_source'      => 'experiences',
         ]);
     }
 
@@ -278,6 +282,7 @@ final class WordPressIntegration {
             'experience_id'    => (int) ($context['experience']['id'] ?? 0),
             'experience_title' => (string) ($context['experience']['title'] ?? ''),
             'page_url'         => isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '',
+            'fp_source'        => 'experiences',
         ]);
     }
 

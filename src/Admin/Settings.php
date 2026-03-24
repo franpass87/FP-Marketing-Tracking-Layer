@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace FPTracking\Admin;
 
 use FPTracking\Audit\ConsentAuditService;
@@ -39,6 +41,20 @@ final class Settings {
         'brevo_endpoint'     => 'https://api.brevo.com/v3/events',
         'brevo_list_id_it'   => '',
         'brevo_list_id_en'   => '',
+        'brevo_list_id_forms_it' => '',
+        'brevo_list_id_forms_en' => '',
+        'brevo_list_id_restaurant_it' => '',
+        'brevo_list_id_restaurant_en' => '',
+        'brevo_list_id_experiences_it' => '',
+        'brevo_list_id_experiences_en' => '',
+        'brevo_list_id_woocommerce_it' => '',
+        'brevo_list_id_woocommerce_en' => '',
+        'brevo_list_id_ctabar_it' => '',
+        'brevo_list_id_ctabar_en' => '',
+        'brevo_list_id_discountgift_it' => '',
+        'brevo_list_id_discountgift_en' => '',
+        'brevo_list_id_bio_it' => '',
+        'brevo_list_id_bio_en' => '',
         'ads_labels'         => [],
     ];
 
@@ -50,9 +66,6 @@ final class Settings {
      * Key = FP event name, value = human label shown in admin.
      */
     public const ADS_EVENTS = [
-        // Ecommerce funnel (add to cart, cart abandoned)
-        'add_to_cart'               => 'Add to Cart (WooCommerce)',
-        'cart_abandoned'            => 'Cart Abandoned (Cart Recovery)',
         // Revenue diretta
         'purchase'                  => 'Purchase (WooCommerce)',
         'event_ticket_purchase'     => 'Event Ticket Purchase (Restaurant)',
@@ -314,7 +327,33 @@ final class Settings {
             }
             echo '</select>';
         } else {
-            $mono = in_array($key, ['gtm_id', 'ga4_measurement_id', 'ga4_api_secret', 'google_ads_id', 'meta_pixel_id', 'meta_access_token', 'clarity_project_id', 'brevo_api_key', 'brevo_endpoint', 'brevo_list_id_it', 'brevo_list_id_en'], true) ? ' is-monospace' : '';
+            $mono = in_array($key, [
+                'gtm_id',
+                'ga4_measurement_id',
+                'ga4_api_secret',
+                'google_ads_id',
+                'meta_pixel_id',
+                'meta_access_token',
+                'clarity_project_id',
+                'brevo_api_key',
+                'brevo_endpoint',
+                'brevo_list_id_it',
+                'brevo_list_id_en',
+                'brevo_list_id_forms_it',
+                'brevo_list_id_forms_en',
+                'brevo_list_id_restaurant_it',
+                'brevo_list_id_restaurant_en',
+                'brevo_list_id_experiences_it',
+                'brevo_list_id_experiences_en',
+                'brevo_list_id_woocommerce_it',
+                'brevo_list_id_woocommerce_en',
+                'brevo_list_id_ctabar_it',
+                'brevo_list_id_ctabar_en',
+                'brevo_list_id_discountgift_it',
+                'brevo_list_id_discountgift_en',
+                'brevo_list_id_bio_it',
+                'brevo_list_id_bio_en',
+            ], true) ? ' is-monospace' : '';
             $id_attr = $input_id !== '' ? ' id="' . esc_attr($input_id) . '"' : '';
 
             if ($with_copy && $input_id !== '') {
@@ -351,6 +390,20 @@ final class Settings {
         $clean['brevo_endpoint']     = esc_url_raw($input['brevo_endpoint'] ?? 'https://api.brevo.com/v3/events');
         $clean['brevo_list_id_it']   = absint($input['brevo_list_id_it'] ?? 0) ?: '';
         $clean['brevo_list_id_en']   = absint($input['brevo_list_id_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_forms_it'] = absint($input['brevo_list_id_forms_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_forms_en'] = absint($input['brevo_list_id_forms_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_restaurant_it'] = absint($input['brevo_list_id_restaurant_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_restaurant_en'] = absint($input['brevo_list_id_restaurant_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_experiences_it'] = absint($input['brevo_list_id_experiences_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_experiences_en'] = absint($input['brevo_list_id_experiences_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_woocommerce_it'] = absint($input['brevo_list_id_woocommerce_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_woocommerce_en'] = absint($input['brevo_list_id_woocommerce_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_ctabar_it'] = absint($input['brevo_list_id_ctabar_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_ctabar_en'] = absint($input['brevo_list_id_ctabar_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_discountgift_it'] = absint($input['brevo_list_id_discountgift_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_discountgift_en'] = absint($input['brevo_list_id_discountgift_en'] ?? 0) ?: '';
+        $clean['brevo_list_id_bio_it'] = absint($input['brevo_list_id_bio_it'] ?? 0) ?: '';
+        $clean['brevo_list_id_bio_en'] = absint($input['brevo_list_id_bio_en'] ?? 0) ?: '';
         $clean['inspector_sample_rate'] = max(1, min(100, (int) ($input['inspector_sample_rate'] ?? 10)));
         $clean['debug_mode']         = !empty($input['debug_mode']);
         return $clean;
@@ -522,7 +575,7 @@ final class Settings {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Non autorizzato.', 'fp-tracking')]);
         }
-        check_ajax_referer('fp_tracking_admin');
+        check_ajax_referer('fp_tracking_admin', 'nonce');
 
         $service = new \FPTracking\Brevo\BrevoListsService($this);
         $result = $service->get_lists();
@@ -540,7 +593,7 @@ final class Settings {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Non autorizzato.', 'fp-tracking')]);
         }
-        check_ajax_referer('fp_tracking_admin');
+        check_ajax_referer('fp_tracking_admin', 'nonce');
 
         $service = new \FPTracking\Brevo\BrevoListsService($this);
         $result = $service->test_connection();
@@ -551,7 +604,10 @@ final class Settings {
                 'account' => $result['account'],
             ]);
         }
-        wp_send_json_error(['message' => $result['message']]);
+        $message = isset($result['message']) && is_string($result['message']) && $result['message'] !== ''
+            ? $result['message']
+            : __('Errore Brevo non specificato. Controlla API key, endpoint e connettività server.', 'fp-tracking');
+        wp_send_json_error(['message' => $message]);
     }
 
     public function handle_export_catalog_health(): void {
@@ -1027,7 +1083,7 @@ final class Settings {
                         </span>
                     </div>
                     <div class="fptracking-card-body">
-                        <p class="description"><?php esc_html_e('Configurazione centralizzata per Brevo: Events API v3, API Key e liste default ITA/ENG. Usata da Forms, Restaurant, Experiences e altri plugin FP.', 'fp-tracking'); ?></p>
+                        <p class="description"><?php esc_html_e('Configurazione centralizzata per Brevo: Events API v3, API Key, liste default ITA/ENG e override per provenienza (Forms, Restaurant, Experiences, ecc.).', 'fp-tracking'); ?></p>
                         <div class="fptracking-toggle-row">
                             <div class="fptracking-toggle-info">
                                 <strong><?php esc_html_e('Brevo Server-Side', 'fp-tracking'); ?></strong>
@@ -1051,12 +1107,82 @@ final class Settings {
                             <div class="fptracking-field">
                                 <label for="fp_tracking_brevo_list_id_it"><?php esc_html_e('Lista Default ITA', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_list_id_it', 'text', '2', [], false, 'fp_tracking_brevo_list_id_it'); ?>
-                                <span class="fptracking-hint"><?php esc_html_e('Lista usata per contatti in italiano. Usata da Forms, Restaurant e altri plugin FP.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint"><?php esc_html_e('Fallback generale per contatti in italiano, usata se non è impostata una lista specifica per plugin/provenienza.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label for="fp_tracking_brevo_list_id_en"><?php esc_html_e('Lista Default ENG', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_list_id_en', 'text', '3', [], false, 'fp_tracking_brevo_list_id_en'); ?>
-                                <span class="fptracking-hint"><?php esc_html_e('Lista usata per contatti in inglese. Se vuota, viene usata la lista ITA.', 'fp-tracking'); ?></span>
+                                <span class="fptracking-hint"><?php esc_html_e('Fallback generale per contatti in inglese. Se vuota, viene usata la lista ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_restaurant_it"><?php esc_html_e('FP Restaurant — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_restaurant_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_restaurant_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP Restaurant Reservations. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_restaurant_en"><?php esc_html_e('FP Restaurant — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_restaurant_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_restaurant_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP Restaurant Reservations. Vuota = fallback a Restaurant ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_experiences_it"><?php esc_html_e('FP Experiences — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_experiences_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_experiences_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP Experiences. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_experiences_en"><?php esc_html_e('FP Experiences — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_experiences_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_experiences_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP Experiences. Vuota = fallback a Experiences ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_woocommerce_it"><?php esc_html_e('WooCommerce (shop standard) — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_woocommerce_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_woocommerce_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per ordini WooCommerce standard (evento purchase del tracking layer). Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_woocommerce_en"><?php esc_html_e('WooCommerce (shop standard) — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_woocommerce_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_woocommerce_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per WooCommerce standard. Vuota = fallback a WooCommerce ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_forms_it"><?php esc_html_e('FP Forms — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_forms_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_forms_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP Forms. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_forms_en"><?php esc_html_e('FP Forms — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_forms_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_forms_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP Forms. Vuota = fallback a Forms ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_ctabar_it"><?php esc_html_e('FP CTA Bar — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_ctabar_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_ctabar_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP CTA Bar. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_ctabar_en"><?php esc_html_e('FP CTA Bar — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_ctabar_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_ctabar_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP CTA Bar. Vuota = fallback a CTA Bar ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_discountgift_it"><?php esc_html_e('FP Discount-Gift — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_discountgift_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_discountgift_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP Discount-Gift. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_discountgift_en"><?php esc_html_e('FP Discount-Gift — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_discountgift_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_discountgift_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP Discount-Gift. Vuota = fallback a Discount-Gift ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_bio_it"><?php esc_html_e('FP Bio Standalone — Lista ITA', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_bio_it', 'text', '0', [], false, 'fp_tracking_brevo_list_id_bio_it'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override per contatti provenienti da FP Bio Standalone. Vuota = usa default ITA.', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_list_id_bio_en"><?php esc_html_e('FP Bio Standalone — Lista ENG', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_list_id_bio_en', 'text', '0', [], false, 'fp_tracking_brevo_list_id_bio_en'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Override ENG per FP Bio Standalone. Vuota = fallback a Bio ITA, poi default ENG/ITA.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Carica liste Brevo', 'fp-tracking'); ?></label>

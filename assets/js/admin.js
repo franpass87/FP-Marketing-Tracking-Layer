@@ -83,14 +83,24 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'action=fp_tracking_test_brevo&nonce=' + encodeURIComponent(fpAdmin.nonce || ''),
                 })
-                .then(function (r) { return r.json(); })
+                .then(function (r) {
+                    return r.text().then(function (text) {
+                        var payload = null;
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (e) {
+                            payload = { success: false, data: { message: text && text.trim() !== '' ? text : 'Risposta non valida dal server' } };
+                        }
+                        return payload;
+                    });
+                })
                 .then(function (res) {
                     testBrevoBtn.disabled = false;
                     testBrevoBtn.innerHTML = orig;
                     if (res.success) {
                         testResult.innerHTML = '<div class="notice notice-success inline" style="margin:0;padding:8px 12px;"><span class="dashicons dashicons-yes-alt"></span> ' + (res.data.message || 'OK') + '</div>';
                     } else {
-                        testResult.innerHTML = '<div class="notice notice-error inline" style="margin:0;padding:8px 12px;">' + (res.data && res.data.message ? res.data.message : 'Errore') + '</div>';
+                        testResult.innerHTML = '<div class="notice notice-error inline" style="margin:0;padding:8px 12px;">' + (res.data && res.data.message ? res.data.message : 'Errore durante il test Brevo') + '</div>';
                     }
                 })
                 .catch(function () {

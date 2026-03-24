@@ -53,6 +53,13 @@ final class BrevoMapper {
         unset($eventProperties['user_data']);
         $eventProperties['event_id'] = (string) ($params['event_id'] ?? uniqid('fp_', true));
         $eventProperties['event_name_source'] = $event_name;
+        if (!isset($eventProperties['fp_source']) || !is_string($eventProperties['fp_source']) || $eventProperties['fp_source'] === '') {
+            if (\function_exists('fp_tracking_brevo_source_from_event')) {
+                $eventProperties['fp_source'] = (string) fp_tracking_brevo_source_from_event($event_name);
+            } else {
+                $eventProperties['fp_source'] = '';
+            }
+        }
 
         $contactProperties = [];
         if (isset($userData['fn'])) {

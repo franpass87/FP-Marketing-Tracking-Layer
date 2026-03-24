@@ -146,7 +146,15 @@ final class BrevoListsService {
             ];
         }
 
-        $errorMsg = is_array($decoded) ? ($decoded['message'] ?? '') : '';
+        $errorMsg = is_array($decoded) ? (string) ($decoded['message'] ?? $decoded['code'] ?? '') : '';
+        if ($errorMsg === '') {
+            $bodySnippet = is_string($body) ? trim(wp_strip_all_tags($body)) : '';
+            if ($bodySnippet !== '') {
+                $errorMsg = substr($bodySnippet, 0, 240);
+            } else {
+                $errorMsg = __('Risposta Brevo vuota o non valida.', 'fp-tracking');
+            }
+        }
         return [
             'success' => false,
             'message' => sprintf('HTTP %d: %s', $code, $errorMsg ?: $body),

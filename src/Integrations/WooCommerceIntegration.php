@@ -66,6 +66,7 @@ final class WooCommerceIntegration {
         do_action('fp_tracking_event', 'view_item_list', [
             'item_list_name' => $this->get_list_name(),
             'items'          => [$this->product_to_item($product)],
+            'fp_source'      => 'woocommerce',
         ]);
     }
 
@@ -77,6 +78,7 @@ final class WooCommerceIntegration {
 
         do_action('fp_tracking_event', 'view_item', [
             'items' => [$this->product_to_item($product)],
+            'fp_source' => 'woocommerce',
         ]);
     }
 
@@ -99,6 +101,7 @@ final class WooCommerceIntegration {
             'value'    => (float) $product->get_price() * $quantity,
             'currency' => get_woocommerce_currency(),
             'items'    => [$item],
+            'fp_source' => 'woocommerce',
         ];
         $user_id = get_current_user_id();
         if ($user_id > 0) {
@@ -124,6 +127,7 @@ final class WooCommerceIntegration {
             'value'    => (float) $cart->get_cart_contents_total(),
             'currency' => get_woocommerce_currency(),
             'items'    => $this->cart_to_items($cart),
+            'fp_source' => 'woocommerce',
         ]);
     }
 
@@ -137,6 +141,7 @@ final class WooCommerceIntegration {
             'value'    => (float) $cart->get_cart_contents_total(),
             'currency' => get_woocommerce_currency(),
             'items'    => $this->cart_to_items($cart),
+            'fp_source' => 'woocommerce',
         ]);
     }
 
@@ -182,6 +187,7 @@ final class WooCommerceIntegration {
             'coupon'         => implode(',', $order->get_coupon_codes()),
             'items'          => $items,
             'event_id'       => 'woo_purchase_' . $order_id . '_' . time(),
+            'fp_source'      => 'woocommerce',
             'user_data'      => [
                 'em' => $order->get_billing_email(),
                 'fn' => $order->get_billing_first_name(),
