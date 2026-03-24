@@ -25,7 +25,14 @@
     // =========================================================================
 
     function push(eventName, params) {
-        var payload = Object.assign({ event: eventName }, params || {});
+        var p = params || {};
+        if (cfg.siteName && !p.affiliation) {
+            p.affiliation = cfg.siteName;
+        }
+        if (!p.page_url && typeof window.location !== 'undefined' && window.location.href) {
+            p.page_url = window.location.href;
+        }
+        var payload = Object.assign({ event: eventName }, p);
         window.dataLayer = window.dataLayer || [];
         if (debug) {
             console.log('[FP Tracking]', eventName, payload);

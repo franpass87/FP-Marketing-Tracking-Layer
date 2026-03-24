@@ -164,6 +164,7 @@ final class Plugin {
             'scrollDepths' => [25, 50, 75, 90, 100],
             'videoPercents'=> [25, 50, 75],
             'ajaxUrl'      => admin_url('admin-ajax.php'),
+            'siteName'     => (string) \get_bloginfo('name'),
         ]);
     }
 }

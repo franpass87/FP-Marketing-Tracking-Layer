@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.24] - 2026-03-24
+### Added
+- `fp-tracking.js`: ogni push client-side aggiunge `affiliation` (nome sito), `page_url` (URL corrente) se mancanti — utile per FP-Bio / FP-CTA-Bar e click vari.
+- `fpTrackingConfig.siteName` in `wp_localize_script`.
+- Bridge FP-Experiences (`WordPressIntegration`): `affiliation`, `page_url` completo (o `order->get_checkout_order_received_url()` quando c’è ordine), filtro `fp_tracking_experiences_bridge_params`.
+
 ## [1.2.23] - 2026-03-24
 ### Fixed
 - Impostazioni: se Brevo API Key (e segreti GA4/Meta) arrivano vuoti al salvataggio, viene mantenuto il valore precedente — evita 401 "Key not found" dopo aver salvato senza reinserire la chiave.

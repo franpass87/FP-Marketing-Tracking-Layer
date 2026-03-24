@@ -4,6 +4,13 @@ namespace FPTracking\Integrations;
 
 use FPTracking\Admin\Settings;
 
+use function apply_filters;
+use function get_bloginfo;
+use function home_url;
+use function sanitize_text_field;
+use function time;
+use function wp_unslash;
+
 /**
  * WordPress core events integration.
  *
@@ -191,7 +198,7 @@ final class WordPressIntegration {
      * $data: ['value', 'currency', 'tickets', 'contact' => ['em','fn','ln','ph']]
      */
     public function track_exp_rtb_submitted(int $experience_id, int $reservation_id, array $data): void {
-        do_action('fp_tracking_event', 'rtb_submitted', [
+        $params = [
             'experience_id'  => $experience_id,
             'reservation_id' => $reservation_id,
             'transaction_id' => 'rtb-' . $reservation_id,
@@ -200,7 +207,8 @@ final class WordPressIntegration {
             'event_id'       => 'rtb_' . $reservation_id . '_' . time(),
             'fp_source'      => 'experiences',
             'user_data'      => array_filter((array) ($data['contact'] ?? [])),
-        ]);
+        ];
+        do_action('fp_tracking_event', 'rtb_submitted', $this->enrichExperiencesBridgeParams($params, 'rtb_submitted', null));
     }
 
     /**
@@ -210,7 +218,7 @@ final class WordPressIntegration {
     public function track_exp_rtb_approved(int $reservation_id, array $context, string $mode): void {
         $exp    = $context['experience'] ?? [];
         $totals = $context['totals'] ?? [];
-        do_action('fp_tracking_event', 'rtb_approved', [
+        $params = [
             'experience_id'    => (int) ($exp['id'] ?? 0),
             'experience_title' => (string) ($exp['title'] ?? ''),
             'reservation_id'   => $reservation_id,
@@ -220,7 +228,8 @@ final class WordPressIntegration {
             'approval_mode'    => $mode,
             'event_id'         => 'rtb_approved_' . $reservation_id . '_' . time(),
             'fp_source'        => 'experiences',
-        ]);
+        ];
+        do_action('fp_tracking_event', 'rtb_approved', $this->enrichExperiencesBridgeParams($params, 'rtb_approved', null));
     }
 
     /**
@@ -231,7 +240,7 @@ final class WordPressIntegration {
         $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
         $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
 
-        do_action('fp_tracking_event', 'gift_purchased', [
+        $params = [
             'voucher_id'     => $voucher_id,
             'order_id'       => $order_id,
             'transaction_id' => 'gift-' . $order_id,
@@ -239,7 +248,8 @@ final class WordPressIntegration {
             'currency'       => $currency,
             'event_id'       => 'gift_' . $voucher_id . '_' . time(),
             'fp_source'      => 'experiences',
-        ]);
+        ];
+        do_action('fp_tracking_event', 'gift_purchased', $this->enrichExperiencesBridgeParams($params, 'gift_purchased', $order instanceof \WC_Order ? $order : null));
     }
 
     /**
@@ -251,7 +261,7 @@ final class WordPressIntegration {
         $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
         $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
 
-        do_action('fp_tracking_event', 'experience_paid', [
+        $params = [
             'reservation_id' => $reservation_id,
             'order_id'       => $order_id,
             'transaction_id' => 'exp-' . $order_id,
@@ -259,7 +269,8 @@ final class WordPressIntegration {
             'currency'       => $currency,
             'event_id'       => 'exp_paid_' . $reservation_id . '_' . time(),
             'fp_source'      => 'experiences',
-        ]);
+        ];
+        do_action('fp_tracking_event', 'experience_paid', $this->enrichExperiencesBridgeParams($params, 'experience_paid', $order instanceof \WC_Order ? $order : null));
     }
 
     /**
@@ -278,12 +289,34 @@ final class WordPressIntegration {
         }
         $fired = true;
 
-        do_action('fp_tracking_event', 'experience_checkout_started', [
+        $params = [
             'experience_id'    => (int) ($context['experience']['id'] ?? 0),
             'experience_title' => (string) ($context['experience']['title'] ?? ''),
-            'page_url'         => isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '',
+            'page_url'         => isset($_SERVER['REQUEST_URI']) ? home_url(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_URI']))) : home_url('/'),
             'fp_source'        => 'experiences',
-        ]);
+        ];
+        do_action('fp_tracking_event', 'experience_checkout_started', $this->enrichExperiencesBridgeParams($params, 'experience_checkout_started', null));
+    }
+
+    /**
+     * Parametri comuni per eventi FP-Experiences inoltrati dal bridge (GA4 MP / Meta).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    private function enrichExperiencesBridgeParams(array $params, string $context, ?\WC_Order $order): array {
+        $params['affiliation'] = (string) get_bloginfo('name');
+
+        if ($order instanceof \WC_Order) {
+            $params['page_url'] = $order->get_checkout_order_received_url();
+        } elseif (empty($params['page_url']) && isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])) {
+            $params['page_url'] = home_url(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_URI'])));
+        }
+
+        /** @var array<string, mixed> $out */
+        $out = apply_filters('fp_tracking_experiences_bridge_params', $params, $context);
+
+        return $out;
     }
 
     private function extract_gf_user_data(array $entry, array $form): array {
