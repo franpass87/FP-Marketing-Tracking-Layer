@@ -3,7 +3,7 @@
  * Plugin Name:       FP Marketing Tracking Layer
  * Plugin URI:        https://github.com/franpass87/FP-Marketing-Tracking-Layer
  * Description:       Centralized marketing tracking layer. Injects GTM, manages Consent Mode v2, routes events from all FP plugins to window.dataLayer and dispatches server-side events to GA4 Measurement Protocol and Meta Conversions API.
- * Version:           1.2.25
+ * Version:           1.2.26
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            Francesco Passeri
@@ -16,7 +16,7 @@ declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('FP_TRACKING_VERSION', '1.2.25');
+define('FP_TRACKING_VERSION', '1.2.26');
 define('FP_TRACKING_FILE', __FILE__);
 define('FP_TRACKING_DIR', plugin_dir_path(__FILE__));
 define('FP_TRACKING_URL', plugin_dir_url(__FILE__));
@@ -56,7 +56,8 @@ add_action('plugins_loaded', static function (): void {
  *   list_id_en: int,
  *   source_lists: array<string, array{it:int,en:int}>,
  *   enabled: bool,
- *   endpoint: string
+ *   endpoint: string,
+ *   transactional_site_tag: string
  * }
  */
 function fp_tracking_get_brevo_settings(): array {
@@ -68,6 +69,7 @@ function fp_tracking_get_brevo_settings(): array {
             'source_lists' => [],
             'enabled' => false,
             'endpoint' => 'https://api.brevo.com/v3/events',
+            'transactional_site_tag' => '',
         ];
     }
     $s = get_option('fp_tracking_settings', []);
@@ -100,8 +102,70 @@ function fp_tracking_get_brevo_settings(): array {
         'source_lists' => $source_lists,
         'enabled' => !empty($s['brevo_enabled']) && !empty($s['brevo_api_key'] ?? ''),
         'endpoint' => (string) ($s['brevo_endpoint'] ?? 'https://api.brevo.com/v3/events'),
+        'transactional_site_tag' => (string) ($s['brevo_transactional_site_tag'] ?? ''),
     ];
     return apply_filters('fp_tracking_brevo_settings', $base);
+}
+
+/**
+ * Tag transactional risolto per questo sito (campo impostazioni o fallback `wp-{host}`).
+ */
+function fp_tracking_brevo_resolve_transactional_site_tag(): string {
+    if (!function_exists('fp_tracking_get_brevo_settings')) {
+        return '';
+    }
+    $stored = trim((string) (fp_tracking_get_brevo_settings()['transactional_site_tag'] ?? ''));
+    if ($stored !== '') {
+        return $stored;
+    }
+    $host = wp_parse_url(home_url(), PHP_URL_HOST);
+    if (is_string($host) && $host !== '') {
+        return 'wp-' . sanitize_key($host);
+    }
+
+    return 'wp-site';
+}
+
+/**
+ * Unisce il tag sito al payload Brevo POST /v3/smtp/email (`tags` array di stringhe).
+ *
+ * @param array<string, mixed> $payload Corpo JSON transactional.
+ *
+ * @return array<string, mixed>
+ */
+function fp_tracking_brevo_merge_transactional_tags(array $payload): array {
+    if (!defined('FP_TRACKING_VERSION')) {
+        return $payload;
+    }
+
+    $site_tag = fp_tracking_brevo_resolve_transactional_site_tag();
+    if ($site_tag === '') {
+        return apply_filters('fp_tracking_brevo_transactional_payload', $payload);
+    }
+
+    $tags = [];
+    if (!empty($payload['tags']) && is_array($payload['tags'])) {
+        foreach ($payload['tags'] as $t) {
+            $t = sanitize_text_field((string) $t);
+            if ($t !== '') {
+                $tags[] = $t;
+            }
+        }
+    }
+
+    $site_lower = strtolower($site_tag);
+    foreach ($tags as $existing) {
+        if (strtolower((string) $existing) === $site_lower) {
+            $payload['tags'] = $tags;
+
+            return apply_filters('fp_tracking_brevo_transactional_payload', $payload);
+        }
+    }
+
+    $tags[] = $site_tag;
+    $payload['tags'] = $tags;
+
+    return apply_filters('fp_tracking_brevo_transactional_payload', $payload);
 }
 
 /**

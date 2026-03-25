@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.2.25-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.2.26-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -30,7 +30,7 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 2. Inserisci il **GTM Container ID** (es. `GTM-XXXXXXX`)
 3. Configura **GA4 Measurement ID** e **API Secret** per eventi server-side
 4. Configura **Meta Pixel ID** e **Access Token** per Conversions API
-5. (Opzionale) attiva **Brevo Server-Side** e inserisci **Brevo API Key**
+5. (Opzionale) attiva **Brevo Server-Side** e inserisci **Brevo API Key**; imposta il **Tag transactional per sito** se usi più WordPress sullo stesso account Brevo o FP Mail SMTP con sync API.
 6. Imposta le preferenze Consent Mode
 
 ### Nota importante: browser vs server-side
@@ -211,6 +211,9 @@ gtag('consent', 'update', {
 | `fp_tracking_queue_heartbeat` | action | Hook cron heartbeat salute coda |
 | `fp_tracking_brevo_upsert_contact_body` | filter | Payload contatto Brevo prima dell’upsert centralizzato |
 | `fp_tracking_brevo_settings` | filter | Impostazioni Brevo esposte ad altri plugin (`fp_tracking_get_brevo_settings`) |
+| `fp_tracking_brevo_transactional_payload` | filter | Payload `POST /v3/smtp/email` dopo il merge del tag sito |
+
+**Brevo transactional (`/v3/smtp/email`)**: prima dell’invio, i plugin FP devono chiamare `fp_tracking_brevo_merge_transactional_tags( $payload )` così il tag sito (impostazione o fallback `wp-{host}`) è sempre presente per filtri e log (es. FP Mail SMTP sync API).
 
 ### REST Endpoints
 Attualmente il plugin non espone endpoint REST pubblici dedicati.

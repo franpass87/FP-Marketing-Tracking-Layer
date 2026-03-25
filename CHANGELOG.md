@@ -2,6 +2,14 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.26] - 2026-03-24
+
+### Added
+
+- Impostazione **Tag transactional per sito** (`brevo_transactional_site_tag`) e inclusione in `fp_tracking_get_brevo_settings()['transactional_site_tag']`.
+- `fp_tracking_brevo_resolve_transactional_site_tag()` e `fp_tracking_brevo_merge_transactional_tags()` per unificare i tag su `POST /v3/smtp/email` (FP Mail log via API, multi-sito su stesso account Brevo).
+- Filtro `fp_tracking_brevo_transactional_payload`.
+
 ## [1.2.25] - 2026-03-24
 ### Added
 - `fp_tracking_brevo_upsert_contact()`: upsert contatti `POST /v3/contacts` con la stessa API key del layer; filtro `fp_tracking_brevo_upsert_contact_body`; integrazione con `fp_tracking_get_brevo_list_id` se `listIds` vuoti.

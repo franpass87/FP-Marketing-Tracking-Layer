@@ -55,6 +55,7 @@ final class Settings {
         'brevo_list_id_discountgift_en' => '',
         'brevo_list_id_bio_it' => '',
         'brevo_list_id_bio_en' => '',
+        'brevo_transactional_site_tag' => '',
         'ads_labels'         => [],
     ];
 
@@ -353,6 +354,7 @@ final class Settings {
                 'brevo_list_id_discountgift_en',
                 'brevo_list_id_bio_it',
                 'brevo_list_id_bio_en',
+                'brevo_transactional_site_tag',
             ], true) ? ' is-monospace' : '';
             $id_attr = $input_id !== '' ? ' id="' . esc_attr($input_id) . '"' : '';
             $extra_attrs = '';
@@ -421,6 +423,8 @@ final class Settings {
         $clean['brevo_list_id_discountgift_en'] = absint($input['brevo_list_id_discountgift_en'] ?? 0) ?: '';
         $clean['brevo_list_id_bio_it'] = absint($input['brevo_list_id_bio_it'] ?? 0) ?: '';
         $clean['brevo_list_id_bio_en'] = absint($input['brevo_list_id_bio_en'] ?? 0) ?: '';
+        $raw_tag = sanitize_text_field((string) ($input['brevo_transactional_site_tag'] ?? ''));
+        $clean['brevo_transactional_site_tag'] = (string) preg_replace('/[^a-zA-Z0-9_\-]/', '', $raw_tag);
         $clean['inspector_sample_rate'] = max(1, min(100, (int) ($input['inspector_sample_rate'] ?? 10)));
         $clean['debug_mode']         = !empty($input['debug_mode']);
         return $clean;
@@ -1120,6 +1124,15 @@ final class Settings {
                             <div class="fptracking-field">
                                 <label><?php esc_html_e('Brevo Endpoint', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_endpoint', 'text', 'https://api.brevo.com/v3/events', []); ?>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_brevo_transactional_site_tag"><?php esc_html_e('Tag transactional per sito', 'fp-tracking'); ?></label>
+                                <?php
+                                $host = wp_parse_url(home_url(), PHP_URL_HOST);
+                                $tag_placeholder = $host ? 'wp-' . sanitize_key((string) $host) : 'wp-site';
+                                ?>
+                                <?php $this->render_field('brevo_transactional_site_tag', 'text', $tag_placeholder, [], false, 'fp_tracking_brevo_transactional_site_tag'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Aggiunto automaticamente a ogni POST /smtp/email dei plugin FP (Experiences, Restaurant, …). Obbligatorio per separare più siti sullo stesso account Brevo e per il log FP Mail via API. Se vuoto, viene usato il suggerimento derivato dall’host del sito.', 'fp-tracking'); ?></span>
                             </div>
                             <div class="fptracking-field">
                                 <label for="fp_tracking_brevo_list_id_it"><?php esc_html_e('Lista Default ITA', 'fp-tracking'); ?></label>
