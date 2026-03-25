@@ -3,7 +3,7 @@
  * Plugin Name:       FP Marketing Tracking Layer
  * Plugin URI:        https://github.com/franpass87/FP-Marketing-Tracking-Layer
  * Description:       Centralized marketing tracking layer. Injects GTM, manages Consent Mode v2, routes events from all FP plugins to window.dataLayer and dispatches server-side events to GA4 Measurement Protocol and Meta Conversions API.
- * Version:           1.2.24
+ * Version:           1.2.25
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            Francesco Passeri
@@ -16,7 +16,7 @@ declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('FP_TRACKING_VERSION', '1.2.24');
+define('FP_TRACKING_VERSION', '1.2.25');
 define('FP_TRACKING_FILE', __FILE__);
 define('FP_TRACKING_DIR', plugin_dir_path(__FILE__));
 define('FP_TRACKING_URL', plugin_dir_url(__FILE__));
@@ -131,6 +131,80 @@ function fp_tracking_get_brevo_list_id(string $source = '', string $language = '
     }
 
     return (int) ($settings['list_id_it'] ?? 0);
+}
+
+/**
+ * Crea/aggiorna un contatto Brevo (POST /v3/contacts) usando la API key configurata in FP Tracking.
+ *
+ * Usare quando `fp_tracking_get_brevo_settings()['enabled']` è true. I plugin FP (Restaurant, Experiences,
+ * Forms) delegano qui l’HTTP verso Brevo per evitare duplicazione di logica e chiavi.
+ *
+ * @param array<string,mixed> $body        Payload Brevo: email (obbligatoria), updateEnabled, attributes, listIds, tags, …
+ * @param string              $list_source Se `listIds` è assente o vuoto: provenienza per `fp_tracking_get_brevo_list_id()` (es. restaurant, experiences, forms).
+ * @param string              $language    `it` o `en` per risolvere la lista quando serve.
+ *
+ * @return array{success:bool,code:int,message:string,contact_id:?int}
+ */
+function fp_tracking_brevo_upsert_contact(array $body, string $list_source = '', string $language = 'it'): array {
+    if (!defined('FP_TRACKING_VERSION')) {
+        return [
+            'success' => false,
+            'code' => 0,
+            'message' => 'FP Tracking not loaded',
+            'contact_id' => null,
+        ];
+    }
+
+    if (!class_exists(\FPTracking\Admin\Settings::class) || !class_exists(\FPTracking\Brevo\BrevoClient::class)) {
+        return [
+            'success' => false,
+            'code' => 0,
+            'message' => 'FP Tracking Brevo client unavailable',
+            'contact_id' => null,
+        ];
+    }
+
+    $body = apply_filters('fp_tracking_brevo_upsert_contact_body', $body, $list_source, $language);
+
+    $email = sanitize_email((string) ($body['email'] ?? ''));
+    if ($email === '') {
+        return [
+            'success' => false,
+            'code' => 0,
+            'message' => 'Missing or invalid email',
+            'contact_id' => null,
+        ];
+    }
+    $body['email'] = $email;
+
+    $listIds = [];
+    if (!empty($body['listIds']) && is_array($body['listIds'])) {
+        foreach ($body['listIds'] as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $listIds[] = $id;
+            }
+        }
+    }
+
+    if ($listIds === [] && $list_source !== '' && function_exists('fp_tracking_get_brevo_list_id')) {
+        $lang = strtolower($language) === 'en' ? 'en' : 'it';
+        $lid = (int) fp_tracking_get_brevo_list_id(sanitize_key($list_source), $lang);
+        if ($lid > 0) {
+            $listIds = [$lid];
+        }
+    }
+
+    if ($listIds !== []) {
+        $body['listIds'] = array_values(array_unique($listIds));
+    } else {
+        unset($body['listIds']);
+    }
+
+    $settings = new \FPTracking\Admin\Settings();
+    $client = new \FPTracking\Brevo\BrevoClient($settings);
+
+    return $client->upsert_contact($body);
 }
 
 /**

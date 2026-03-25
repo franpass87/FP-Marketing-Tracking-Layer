@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.25] - 2026-03-24
+### Added
+- `fp_tracking_brevo_upsert_contact()`: upsert contatti `POST /v3/contacts` con la stessa API key del layer; filtro `fp_tracking_brevo_upsert_contact_body`; integrazione con `fp_tracking_get_brevo_list_id` se `listIds` vuoti.
+- `BrevoClient::upsert_contact()` per l’invio HTTP centralizzato.
+- Documentazione `docs/BREVO-CENTRAL-CONTACT-SYNC.md` (matrice plugin e fallback).
+
 ## [1.2.24] - 2026-03-24
 ### Added
 - `fp-tracking.js`: ogni push client-side aggiunge `affiliation` (nome sito), `page_url` (URL corrente) se mancanti — utile per FP-Bio / FP-CTA-Bar e click vari.

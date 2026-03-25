@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.2.24-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.2.25-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -209,6 +209,8 @@ gtag('consent', 'update', {
 | `fp_tracking_registered_integrations` | filter | Popola l'elenco integrazioni mostrato in admin |
 | `fp_tracking_queue_worker` | action | Hook cron worker coda server-side |
 | `fp_tracking_queue_heartbeat` | action | Hook cron heartbeat salute coda |
+| `fp_tracking_brevo_upsert_contact_body` | filter | Payload contatto Brevo prima dell’upsert centralizzato |
+| `fp_tracking_brevo_settings` | filter | Impostazioni Brevo esposte ad altri plugin (`fp_tracking_get_brevo_settings`) |
 
 ### REST Endpoints
 Attualmente il plugin non espone endpoint REST pubblici dedicati.
