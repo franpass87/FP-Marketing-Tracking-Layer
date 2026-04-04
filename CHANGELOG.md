@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.30] - 2026-04-04
+
+### Changed
+- `EventSchema`: normalizzazione esplicita di `meal_label` e `price_per_person` negli eventi booking (dataLayer coerente con FP Restaurant).
+
 ## [1.2.29] - 2026-04-04
 
 ### Changed

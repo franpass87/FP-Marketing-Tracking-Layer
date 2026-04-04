@@ -65,9 +65,18 @@ final class EventSchema {
             }
         }
 
-        // --- Booking fields ---
-        foreach (['reservation_id', 'reservation_party', 'reservation_date', 'reservation_time', 'reservation_location', 'meal_type'] as $f) {
-            if (isset($params[$f])) {
+        // --- Booking fields (Restaurant + layer; meal_label / price_per_person passano al pass-through se non elencati)
+        foreach ([
+            'reservation_id',
+            'reservation_party',
+            'reservation_date',
+            'reservation_time',
+            'reservation_location',
+            'meal_type',
+            'meal_label',
+            'price_per_person',
+        ] as $f) {
+            if (isset($params[$f]) && $params[$f] !== '') {
                 $normalized[$f] = $params[$f];
             }
         }
