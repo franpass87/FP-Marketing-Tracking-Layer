@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.2.27-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.2.28-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -38,6 +38,10 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 - Gli eventi client-side avvengono nel browser tramite `window.dataLayer` -> GTM (quindi funzionano anche senza canale server-side).
 - **GA4 API Secret** e **Meta Access Token** servono solo per l'invio server-side (Measurement Protocol / CAPI).
 - Per Brevo, il plugin usa endpoint ufficiale `https://api.brevo.com/v3/events` con header `api-key`.
+
+### Checklist produzione (stack FP + GTM)
+- **FP Marketing Tracking Layer sempre attivo** sui siti che usano prenotazioni ristorante, form e integrazioni Brevo centralizzate: senza layer si perdono dataLayer/GTM unificato e le API helper (`fp_tracking_*`), con rischio di percorsi legacy nei plugin che ne dipendono.
+- **Click puramente client (es. CTA bar, link bio)**: la fonte consigliata per GA4/Meta in GTM è il **browser** (`CustomEvent` / dataLayer). L’enqueue server-side dedicato a quei click è opzionale e va usato solo se serve esplicitamente CAPI/MP oltre al client, con attenzione alla deduplica (`event_id`).
 
 ### Requisiti
 - WordPress 6.0+

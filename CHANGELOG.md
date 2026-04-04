@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.28] - 2026-04-04
+
+### Changed
+- README: checklist produzione (layer sempre attivo nello stack FP) e nota operativa su click client-only (GTM) vs enqueue server-side opzionale.
+
 ## [1.2.27] - 2026-04-04
 
 ### Added
