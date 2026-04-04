@@ -7,8 +7,10 @@ use FPTracking\Admin\Settings;
 use function apply_filters;
 use function get_bloginfo;
 use function home_url;
+use function implode;
 use function sanitize_text_field;
 use function time;
+use function uniqid;
 use function wp_unslash;
 
 /**
@@ -261,16 +263,71 @@ final class WordPressIntegration {
         $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
         $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
 
+        $items = $this->build_experience_order_line_items($order);
+
         $params = [
             'reservation_id' => $reservation_id,
             'order_id'       => $order_id,
             'transaction_id' => 'exp-' . $order_id,
             'value'          => $value,
             'currency'       => $currency,
-            'event_id'       => 'exp_paid_' . $reservation_id . '_' . time(),
+            'event_id'       => uniqid('exp_paid_' . $reservation_id . '_', true),
             'fp_source'      => 'experiences',
         ];
+
+        if ($items !== []) {
+            $params['items'] = $items;
+        }
+
+        if ($order instanceof \WC_Order) {
+            $coupons = $order->get_coupon_codes();
+            if ($coupons !== []) {
+                $params['coupon'] = implode(',', $coupons);
+            }
+        }
+
         do_action('fp_tracking_event', 'experience_paid', $this->enrichExperiencesBridgeParams($params, 'experience_paid', $order instanceof \WC_Order ? $order : null));
+    }
+
+    /**
+     * Estrae righe ecommerce GA4 dalle linee ordine FP Experiences (`fp_experience_item`).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function build_experience_order_line_items(?\WC_Order $order): array {
+        if (! $order instanceof \WC_Order) {
+            return [];
+        }
+
+        $items = [];
+
+        foreach ($order->get_items() as $item) {
+            if (! $item instanceof \WC_Order_Item) {
+                continue;
+            }
+
+            if ($item->get_type() !== 'fp_experience_item') {
+                continue;
+            }
+
+            $qty = (int) $item->get_meta('quantity');
+            if ($qty < 1) {
+                $qty = 1;
+            }
+
+            $lineTotal = (float) $item->get_total();
+            $unitPrice = $qty > 0 ? round($lineTotal / $qty, 2) : $lineTotal;
+
+            $items[] = [
+                'item_id'       => (string) $item->get_meta('experience_id'),
+                'item_name'     => (string) $item->get_meta('experience_title'),
+                'item_category' => 'experience',
+                'price'         => $unitPrice,
+                'quantity'      => $qty,
+            ];
+        }
+
+        return $items;
     }
 
     /**

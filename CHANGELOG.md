@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.31] - 2026-04-04
+
+### Changed
+- Bridge FP Experiences: `experience_paid` include **`items`** (righe `fp_experience_item`, prezzo unitario), **`coupon`** se presente, **`event_id`** con `uniqid` per coerenza con altri eventi.
+
 ## [1.2.30] - 2026-04-04
 
 ### Changed
