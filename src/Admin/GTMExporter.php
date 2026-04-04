@@ -163,6 +163,11 @@ final class GTMExporter {
             'source_plugin'     => 'FP - DL source_plugin',
             'operator_id'       => 'FP - DL operator_id',
             'cart_id'           => 'FP - DL cart_id',
+            // FP-Distributor-Media-Kit
+            'user_id'           => 'FP - DL user_id',
+            'segment'           => 'FP - DL segment',
+            'asset_id'          => 'FP - DL asset_id',
+            'asset_title'       => 'FP - DL asset_title',
         ];
 
         foreach ($dl_params as $param => $label) {
@@ -617,6 +622,33 @@ final class GTMExporter {
                 'submission_id' => $variables['submission_id']['name'],
                 'form_id'       => $variables['form_id']['name'],
                 'operator_id'   => $variables['operator_id']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+
+            // ── FP-Distributor-Media-Kit ───────────────────────────────────
+            in_array($event_name, ['dmk_login_failed', 'dmk_login_blocked_not_approved'], true) => [
+                'reason'        => $variables['reason']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+            $event_name === 'dmk_login_success' => [
+                'user_id'       => $variables['user_id']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+            $event_name === 'dmk_registration_submitted' => [
+                'user_id'       => $variables['user_id']['name'],
+                'segment'       => $variables['segment']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+            $event_name === 'dmk_user_approved' => [
+                'user_id'       => $variables['user_id']['name'],
+                'operator_id'   => $variables['operator_id']['name'],
+                'source'        => $variables['source']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+            $event_name === 'dmk_asset_downloaded' => [
+                'asset_id'      => $variables['asset_id']['name'],
+                'asset_title'   => $variables['asset_title']['name'],
+                'user_id'       => $variables['user_id']['name'],
                 'source_plugin' => $variables['source_plugin']['name'],
             ],
 

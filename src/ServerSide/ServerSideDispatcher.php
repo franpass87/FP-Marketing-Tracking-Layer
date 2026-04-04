@@ -190,6 +190,25 @@ final class ServerSideDispatcher {
             $custom['content_category'] = 'form_payment';
         }
 
+        if ($event_name === 'dmk_registration_submitted') {
+            $custom['content_name']      = (string) ($params['segment'] ?? '');
+            $custom['content_category'] = 'distributor_registration';
+        }
+
+        if ($event_name === 'dmk_user_approved') {
+            $custom['content_name']      = 'distributor_approved';
+            $custom['content_category'] = 'distributor_media_kit';
+        }
+
+        if ($event_name === 'dmk_login_success') {
+            $custom['content_category'] = 'distributor_login';
+        }
+
+        if ($event_name === 'dmk_asset_downloaded') {
+            $custom['content_name']      = (string) ($params['asset_title'] ?? '');
+            $custom['content_category'] = 'media_kit_download';
+        }
+
         return $custom;
     }
 }

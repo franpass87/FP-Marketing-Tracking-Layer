@@ -113,6 +113,14 @@ final class EventCatalog
         // FP-Bio-Standalone
         'bio_link_click'              => ['label' => 'Bio Link Click',              'type' => 'ga4'],
 
+        // FP-Distributor-Media-Kit
+        'dmk_login_failed'               => ['label' => 'DMK Login Failed',               'type' => 'ga4'],
+        'dmk_login_blocked_not_approved' => ['label' => 'DMK Login Blocked (Not Approved)', 'type' => 'ga4'],
+        'dmk_login_success'              => ['label' => 'DMK Login Success',              'type' => 'ga4'],
+        'dmk_registration_submitted'     => ['label' => 'DMK Registration Submitted',     'type' => 'ga4+meta'],
+        'dmk_user_approved'              => ['label' => 'DMK User Approved',              'type' => 'ga4+meta'],
+        'dmk_asset_downloaded'           => ['label' => 'DMK Asset Downloaded',           'type' => 'ga4+meta'],
+
         // FP-Discount-Gift
         'discount_applied'            => ['label' => 'Discount Applied',            'type' => 'ga4'],
         'discount_code_attempted'     => ['label' => 'Discount Code Attempted',     'type' => 'ga4'],
@@ -155,6 +163,10 @@ final class EventCatalog
         'click_phone'                 => 'Contact',
         'click_whatsapp'              => 'Contact',
         'sign_up'                     => 'CompleteRegistration',
+        'dmk_registration_submitted'  => 'CompleteRegistration',
+        'dmk_user_approved'           => 'Lead',
+        'dmk_login_success'           => 'Lead',
+        'dmk_asset_downloaded'        => 'ViewContent',
     ];
 
     /**
@@ -196,6 +208,10 @@ final class EventCatalog
         'accrediti_request_created',
         'accrediti_request_approved',
         'accrediti_request_rejected',
+        'dmk_registration_submitted',
+        'dmk_login_success',
+        'dmk_user_approved',
+        'dmk_asset_downloaded',
     ];
 
     /**
@@ -247,6 +263,9 @@ final class EventCatalog
         'gift_card_issued'       => ['gift_card_code'],
         'gift_card_expiring_soon'=> ['gift_card_code'],
         'gift_card_expired'      => ['gift_card_code'],
+        'dmk_registration_submitted' => ['user_id'],
+        'dmk_user_approved'           => ['user_id'],
+        'dmk_asset_downloaded'        => ['asset_id', 'user_id'],
     ];
 
     /**

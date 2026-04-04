@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.33] - 2026-04-04
+
+### Added
+- Catalogo eventi **FP Distributor Media Kit (DMK)**: `dmk_login_failed`, `dmk_login_blocked_not_approved`, `dmk_login_success`, `dmk_registration_submitted`, `dmk_user_approved`, `dmk_asset_downloaded` (mapping Meta, campi obbligatori, server-side dove applicabile).
+- Export GTM: variabili dataLayer e parametri GA4 per gli eventi DMK; Meta CAPI `custom_data` allineato per registration, approval, login e download asset.
+
 ## [1.2.32] - 2026-04-04
 
 ### Fixed
