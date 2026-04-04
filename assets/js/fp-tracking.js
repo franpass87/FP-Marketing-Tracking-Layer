@@ -365,6 +365,8 @@
     // FP-CTA-Bar: link/bar click (category da data-fp-track-category quando «Traccia click» è attivo)
     document.addEventListener('fpCtaBarClick', function (e) {
         var d = e.detail || {};
+        var rawName = d.eventName && String(d.eventName).trim();
+        var evName = rawName && /^[a-z0-9_]{1,40}$/i.test(rawName) ? rawName.toLowerCase() : 'cta_bar_click';
         var p = {
             cta_label:     d.label    || '',
             cta_action:    d.action   || d.url || '',
@@ -374,7 +376,7 @@
         if (d.eventId) {
             p.event_id = d.eventId;
         }
-        push('cta_bar_click', p);
+        push(evName, p);
     });
 
     // Generic FP tracking bridge

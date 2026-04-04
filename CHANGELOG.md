@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.29] - 2026-04-04
+
+### Changed
+- `fp-tracking.js`: listener `fpCtaBarClick` usa `detail.eventName` (validato) per il nome evento nel dataLayer, così coincide con l’impostazione FP CTA Bar (default `cta_bar_click`).
+
 ## [1.2.28] - 2026-04-04
 
 ### Changed
