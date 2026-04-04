@@ -351,22 +351,30 @@
     // FP-Bio-Standalone: link click
     document.addEventListener('fpBioLinkClick', function (e) {
         var d = e.detail || {};
-        push('bio_link_click', {
+        var p = {
             bio_link_label:    d.label       || '',
             bio_link_url:      d.url         || '',
             bio_link_category: d.category    || '',
-        });
+        };
+        if (d.eventId) {
+            p.event_id = d.eventId;
+        }
+        push('bio_link_click', p);
     });
 
     // FP-CTA-Bar: link/bar click (category da data-fp-track-category quando «Traccia click» è attivo)
     document.addEventListener('fpCtaBarClick', function (e) {
         var d = e.detail || {};
-        push('cta_bar_click', {
+        var p = {
             cta_label:     d.label    || '',
             cta_action:    d.action   || d.url || '',
             cta_url:       d.url      || '',
             cta_category:  d.category || '',
-        });
+        };
+        if (d.eventId) {
+            p.event_id = d.eventId;
+        }
+        push('cta_bar_click', p);
     });
 
     // Generic FP tracking bridge

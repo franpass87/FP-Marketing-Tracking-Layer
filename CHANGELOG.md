@@ -2,6 +2,15 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.27] - 2026-04-04
+
+### Added
+- `fp_tracking_enqueue_server_event()`: accoda GA4 MP / Meta / Brevo da contesti senza `wp_footer` (beacon REST), con `event_id` allineato al client.
+- Catalogo eventi: `form_payment_completed`, `cart_recovery`, `cart_recovery_email_sent`, `accrediti_request_*`; mapping Meta `Purchase` per `form_payment_completed`; export GTM aggiornato (incl. `cta_category`).
+
+### Changed
+- `fp-tracking.js`: inoltra `event_id` da `fpCtaBarClick` / `fpBioLinkClick` quando presente nel `detail`.
+
 ## [1.2.26] - 2026-03-24
 
 ### Added

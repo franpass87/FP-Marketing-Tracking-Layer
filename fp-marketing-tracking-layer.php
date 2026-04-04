@@ -3,7 +3,7 @@
  * Plugin Name:       FP Marketing Tracking Layer
  * Plugin URI:        https://github.com/franpass87/FP-Marketing-Tracking-Layer
  * Description:       Centralized marketing tracking layer. Injects GTM, manages Consent Mode v2, routes events from all FP plugins to window.dataLayer and dispatches server-side events to GA4 Measurement Protocol and Meta Conversions API.
- * Version:           1.2.26
+ * Version:           1.2.27
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            Francesco Passeri
@@ -16,7 +16,7 @@ declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('FP_TRACKING_VERSION', '1.2.26');
+define('FP_TRACKING_VERSION', '1.2.27');
 define('FP_TRACKING_FILE', __FILE__);
 define('FP_TRACKING_DIR', plugin_dir_path(__FILE__));
 define('FP_TRACKING_URL', plugin_dir_url(__FILE__));
@@ -43,6 +43,29 @@ add_action('plugins_loaded', static function (): void {
         throw $e;
     }
 });
+
+/**
+ * Accoda dispatch server-side (GA4 MP / Meta / Brevo) anche senza `wp_footer` (es. beacon REST).
+ * Usa lo stesso `event_id` emesso da fp-tracking.js sul client per deduplica GA4.
+ *
+ * @param string               $event_name Nome evento FP (es. cta_bar_click, bio_link_click).
+ * @param array<string, mixed> $params     Payload allineato a `fp_tracking_event`.
+ */
+function fp_tracking_enqueue_server_event(string $event_name, array $params): void {
+    if (!defined('FP_TRACKING_VERSION')) {
+        return;
+    }
+    if (($params['event_id'] ?? '') === '') {
+        $params['event_id'] = uniqid('fp_', true);
+    }
+    try {
+        \FPTracking\Core\Plugin::instance()->enqueue_server_side_event($event_name, $params);
+    } catch (Throwable $e) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[FP-Marketing-Tracking-Layer] fp_tracking_enqueue_server_event: ' . $e->getMessage());
+        }
+    }
+}
 
 /**
  * Restituisce le impostazioni Brevo centralizzate per uso da altri plugin FP.

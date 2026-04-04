@@ -56,6 +56,16 @@ final class EventCatalog
         'form_submit_attempt'    => ['label' => 'Form Submit Attempt',    'type' => 'ga4'],
         'fp_form_submit_success' => ['label' => 'FP Form Submit Success', 'type' => 'ga4'],
         'form_payment_started'   => ['label' => 'Form Payment Started',   'type' => 'ga4+meta+ads'],
+        'form_payment_completed' => ['label' => 'Form Payment Completed',   'type' => 'ga4+meta+ads'],
+
+        // FP-Cart-Recovery
+        'cart_recovery'            => ['label' => 'Cart Recovery (link clicked)', 'type' => 'ga4'],
+        'cart_recovery_email_sent' => ['label' => 'Cart Recovery Email Sent',     'type' => 'ga4'],
+
+        // FP-Forms-Accrediti
+        'accrediti_request_created'  => ['label' => 'Accrediti Request Created',  'type' => 'ga4'],
+        'accrediti_request_approved' => ['label' => 'Accrediti Request Approved', 'type' => 'ga4'],
+        'accrediti_request_rejected' => ['label' => 'Accrediti Request Rejected', 'type' => 'ga4'],
 
         // FP-Restaurant-Reservations
         'booking_form_view'         => ['label' => 'Booking Form View',         'type' => 'ga4'],
@@ -137,6 +147,7 @@ final class EventCatalog
         'booking_submitted'           => 'InitiateCheckout',
         'experience_checkout_started' => 'InitiateCheckout',
         'form_payment_started'        => 'InitiateCheckout',
+        'form_payment_completed'      => 'Purchase',
         'add_to_cart'                 => 'AddToCart',
         'cart_abandoned'              => 'CartAbandoned',
         'generate_lead'               => 'Lead',
@@ -162,6 +173,7 @@ final class EventCatalog
         'event_ticket_purchase',
         'generate_lead',
         'form_payment_started',
+        'form_payment_completed',
         'experience_checkout_started',
         'experience_paid',
         'rtb_submitted',
@@ -179,6 +191,11 @@ final class EventCatalog
         'gift_card_issued',
         'gift_card_expiring_soon',
         'gift_card_expired',
+        'cart_recovery',
+        'cart_recovery_email_sent',
+        'accrediti_request_created',
+        'accrediti_request_approved',
+        'accrediti_request_rejected',
     ];
 
     /**
@@ -195,6 +212,7 @@ final class EventCatalog
         'rtb_approved',
         'gift_purchased',
         'gift_voucher_purchased',
+        'form_payment_completed',
     ];
 
     /**
@@ -211,6 +229,12 @@ final class EventCatalog
         'booking_payment_completed' => ['value', 'currency'],
         'experience_paid'        => ['value', 'currency'],
         'generate_lead'          => ['form_id'],
+        'form_payment_completed' => ['transaction_id', 'value', 'currency'],
+        'cart_recovery'          => ['value', 'currency'],
+        'cart_recovery_email_sent' => ['value', 'currency'],
+        'accrediti_request_created'  => ['request_id', 'form_id'],
+        'accrediti_request_approved' => ['request_id', 'form_id'],
+        'accrediti_request_rejected' => ['request_id', 'form_id'],
         'discount_applied'       => ['coupon'],
         'discount_code_attempted'=> ['coupon'],
         'discount_code_rejected' => ['coupon'],

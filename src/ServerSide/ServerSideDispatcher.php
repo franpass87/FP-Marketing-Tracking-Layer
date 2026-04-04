@@ -185,6 +185,11 @@ final class ServerSideDispatcher {
             $custom['content_category'] = 'form_payment';
         }
 
+        if ($event_name === 'form_payment_completed') {
+            $custom['content_name']     = (string) ($params['form_title'] ?? '');
+            $custom['content_category'] = 'form_payment';
+        }
+
         return $custom;
     }
 }

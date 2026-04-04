@@ -81,6 +81,7 @@ final class Settings {
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',
         'form_payment_started'      => 'Form Payment Started (Forms)',
+        'form_payment_completed'    => 'Form Payment Completed (Forms)',
         'discount_applied'          => 'Discount Applied (Discount-Gift)',
         'gift_card_applied'         => 'Gift Card Applied (Discount-Gift)',
         // Contact click

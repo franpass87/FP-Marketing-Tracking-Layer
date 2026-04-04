@@ -138,6 +138,7 @@ final class GTMExporter {
             'cta_label'         => 'FP - DL cta_label',
             'cta_action'        => 'FP - DL cta_action',
             'cta_url'           => 'FP - DL cta_url',
+            'cta_category'      => 'FP - DL cta_category',
             // FP-Bio-Standalone
             'bio_link_label'    => 'FP - DL bio_link_label',
             'bio_link_url'      => 'FP - DL bio_link_url',
@@ -155,6 +156,13 @@ final class GTMExporter {
             // Error events
             'error_message'     => 'FP - DL error_message',
             'error_type'        => 'FP - DL error_type',
+            // FP-Forms payment / FP-Accrediti / Cart recovery
+            'payment_provider'  => 'FP - DL payment_provider',
+            'payment_status'    => 'FP - DL payment_status',
+            'request_id'        => 'FP - DL request_id',
+            'source_plugin'     => 'FP - DL source_plugin',
+            'operator_id'       => 'FP - DL operator_id',
+            'cart_id'           => 'FP - DL cart_id',
         ];
 
         foreach ($dl_params as $param => $label) {
@@ -372,6 +380,7 @@ final class GTMExporter {
                     'experience_paid', 'rtb_approved', 'gift_purchased',
                     'gift_voucher_purchased', 'gift_card_redeemed',
                     'add_to_cart', 'cart_abandoned', 'begin_checkout', 'form_payment_started',
+                    'form_payment_completed',
                 ];
                 $value_param = in_array($fp_event, $events_with_value, true)
                     ? "fbq('track', '" . $meta_event . "', {value: {{" . $variables['value']['name'] . "}}, currency: {{" . $variables['currency']['name'] . "}} || 'EUR', eventID: {{" . $variables['event_id']['name'] . "}}});"
@@ -434,6 +443,16 @@ final class GTMExporter {
                 'form_id'  => $variables['form_id']['name'],
                 'value'    => $variables['value']['name'],
                 'currency' => $variables['currency']['name'],
+            ],
+            $event_name === 'form_payment_completed' => [
+                'form_id'          => $variables['form_id']['name'],
+                'form_title'       => $variables['form_title']['name'],
+                'submission_id'    => $variables['submission_id']['name'],
+                'transaction_id'   => $variables['transaction_id']['name'],
+                'payment_status'   => $variables['payment_status']['name'],
+                'payment_provider' => $variables['payment_provider']['name'],
+                'value'            => $variables['value']['name'],
+                'currency'         => $variables['currency']['name'],
             ],
             in_array($event_name, ['contact_form_submit'], true) => [
                 'form_id'   => $variables['form_id']['name'],
@@ -568,9 +587,10 @@ final class GTMExporter {
 
             // ── FP-CTA-Bar ───────────────────────────────────────────────────
             $event_name === 'cta_bar_click' => [
-                'cta_label'  => $variables['cta_label']['name'],
-                'cta_action' => $variables['cta_action']['name'],
-                'cta_url'    => $variables['cta_url']['name'],
+                'cta_label'    => $variables['cta_label']['name'],
+                'cta_action'   => $variables['cta_action']['name'],
+                'cta_url'      => $variables['cta_url']['name'],
+                'cta_category' => $variables['cta_category']['name'],
             ],
 
             // ── FP-Bio-Standalone ────────────────────────────────────────────
@@ -578,6 +598,26 @@ final class GTMExporter {
                 'bio_link_label'    => $variables['bio_link_label']['name'],
                 'bio_link_url'      => $variables['bio_link_url']['name'],
                 'bio_link_category' => $variables['bio_link_category']['name'],
+            ],
+
+            in_array($event_name, ['cart_recovery', 'cart_recovery_email_sent'], true) => [
+                'value'    => $variables['value']['name'],
+                'currency' => $variables['currency']['name'],
+                'cart_id'  => $variables['cart_id']['name'],
+            ],
+
+            $event_name === 'accrediti_request_created' => [
+                'request_id'    => $variables['request_id']['name'],
+                'submission_id' => $variables['submission_id']['name'],
+                'form_id'       => $variables['form_id']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
+            ],
+            in_array($event_name, ['accrediti_request_approved', 'accrediti_request_rejected'], true) => [
+                'request_id'    => $variables['request_id']['name'],
+                'submission_id' => $variables['submission_id']['name'],
+                'form_id'       => $variables['form_id']['name'],
+                'operator_id'   => $variables['operator_id']['name'],
+                'source_plugin' => $variables['source_plugin']['name'],
             ],
 
             // ── FP-Discount-Gift ────────────────────────────────────────────
