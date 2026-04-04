@@ -57,6 +57,11 @@ final class DataLayerManager {
         // Ensures GA4, Meta, Brevo receive campaign data for conversions.
         $params = $this->merge_utm_attribution($params);
 
+        $skip_server_dispatch = !empty($params['fp_skip_server_dispatch']);
+        if ($skip_server_dispatch) {
+            unset($params['fp_skip_server_dispatch']);
+        }
+
         // Ensure event_id exists before building the payload.
         // The same ID is used for both the dataLayer push (→ GTM → fbq eventID)
         // and the server-side dispatch (→ Meta CAPI event_id), enabling deduplication.
@@ -71,7 +76,7 @@ final class DataLayerManager {
         $this->queue[] = $event;
 
         // Trigger server-side dispatch (GA4 MP + Meta CAPI) for conversion events
-        if ($this->is_server_side_event($event_name)) {
+        if (!$skip_server_dispatch && $this->is_server_side_event($event_name)) {
             do_action('fp_tracking_server_side', $event_name, $params);
         }
     }

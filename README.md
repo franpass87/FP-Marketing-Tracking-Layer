@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.2.31-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.2.32-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -216,6 +216,8 @@ gtag('consent', 'update', {
 | `fp_tracking_brevo_upsert_contact_body` | filter | Payload contatto Brevo prima dell’upsert centralizzato |
 | `fp_tracking_brevo_settings` | filter | Impostazioni Brevo esposte ad altri plugin (`fp_tracking_get_brevo_settings`) |
 | `fp_tracking_brevo_transactional_payload` | filter | Payload `POST /v3/smtp/email` dopo il merge del tag sito |
+
+Nel payload di `fp_tracking_event`, **`fp_skip_server_dispatch`** (bool): se vero, l’evento viene accodato solo per il **dataLayer** (GTM) e **non** viene emesso `fp_tracking_server_side` (GA4 MP / Meta / Brevo) per quell’invocazione. Campo interno, rimosso prima della normalizzazione.
 
 **Brevo transactional (`/v3/smtp/email`)**: prima dell’invio, i plugin FP devono chiamare `fp_tracking_brevo_merge_transactional_tags( $payload )` così il tag sito (impostazione o fallback `wp-{host}`) è sempre presente per filtri e log (es. FP Mail SMTP sync API).
 

@@ -26,6 +26,14 @@ use function wp_unslash;
  */
 final class WordPressIntegration {
 
+    /**
+     * Ordini per cui `fp_exp_reservation_paid` è già stato gestito nella richiesta HTTP corrente
+     * (evita doppio push dataLayer se thank you e reservation_paid coincidono).
+     *
+     * @var array<int, true>
+     */
+    private static array $experienceReservationPaidOrdersThisRequest = [];
+
     public function __construct(private readonly Settings $settings) {}
 
     public function register_hooks(): void {
@@ -55,6 +63,7 @@ final class WordPressIntegration {
             add_action('fp_exp_gift_purchased',      [$this, 'track_exp_gift_purchased'], 10, 2);
             add_action('fp_exp_reservation_paid',    [$this, 'track_exp_reservation_paid'], 10, 2);
             add_action('fp_exp_shortcode_rendered',  [$this, 'track_exp_shortcode_rendered'], 10, 2);
+            add_action('woocommerce_thankyou',       [$this, 'thankyou_replay_experience_paid_for_datalayer'], 25, 1);
         }
     }
 
@@ -259,20 +268,88 @@ final class WordPressIntegration {
      * Fires when a WooCommerce experience order is paid.
      */
     public function track_exp_reservation_paid(int $reservation_id, int $order_id): void {
+        self::$experienceReservationPaidOrdersThisRequest[$order_id] = true;
+
         $order = function_exists('wc_get_order') ? wc_get_order($order_id) : null;
+        $params = $this->compose_experience_paid_params($reservation_id, $order_id, $order instanceof \WC_Order ? $order : null);
+
+        if ($order instanceof \WC_Order) {
+            $this->persist_experience_paid_event_id($order, $reservation_id, (string) $params['event_id']);
+        }
+
+        do_action('fp_tracking_event', 'experience_paid', $this->enrichExperiencesBridgeParams($params, 'experience_paid', $order instanceof \WC_Order ? $order : null));
+    }
+
+    /**
+     * Thank you page: replica `experience_paid` nel dataLayer per GTM se l’evento è stato accodato
+     * durante il POST checkout (redirect prima del `wp_footer`), senza secondo invio server-side.
+     */
+    public function thankyou_replay_experience_paid_for_datalayer(int $order_id): void {
+        if (!function_exists('wc_get_order')) {
+            return;
+        }
+        $order = wc_get_order($order_id);
+        if (!$order instanceof \WC_Order) {
+            return;
+        }
+        if ($order->get_meta('_fp_exp_is_gift_order') === 'yes') {
+            return;
+        }
+        if (!$this->order_contains_fp_experience_items($order)) {
+            return;
+        }
+        if (isset(self::$experienceReservationPaidOrdersThisRequest[$order_id])) {
+            return;
+        }
+        if ($order->get_meta('_fp_track_exp_ty_dl_sent') === '1') {
+            return;
+        }
+
+        $reservation_ids = class_exists(\FP_Exp\Booking\Reservations::class)
+            ? \FP_Exp\Booking\Reservations::get_ids_by_order($order_id)
+            : [];
+
+        if ($reservation_ids === []) {
+            return;
+        }
+
+        $event_map = $order->get_meta('_fp_track_exp_paid_event_ids', true);
+        $event_map = is_array($event_map) ? $event_map : [];
+
+        foreach ($reservation_ids as $reservation_id) {
+            $reservation_id = (int) $reservation_id;
+            $params = $this->compose_experience_paid_params($reservation_id, $order_id, $order);
+            $saved = $event_map[(string) $reservation_id] ?? $event_map[$reservation_id] ?? '';
+            if ($saved !== '') {
+                $params['event_id'] = (string) $saved;
+            }
+            $params['fp_skip_server_dispatch'] = true;
+            do_action('fp_tracking_event', 'experience_paid', $this->enrichExperiencesBridgeParams($params, 'experience_paid', $order));
+        }
+
+        $order->update_meta_data('_fp_track_exp_ty_dl_sent', '1');
+        $order->save();
+    }
+
+    /**
+     * Payload `experience_paid` (bridge Experiences).
+     *
+     * @return array<string, mixed>
+     */
+    private function compose_experience_paid_params(int $reservation_id, int $order_id, ?\WC_Order $order): array {
         $value = $order instanceof \WC_Order ? (float) $order->get_total() : 0.0;
         $currency = $order instanceof \WC_Order ? $order->get_currency() : 'EUR';
 
         $items = $this->build_experience_order_line_items($order);
 
         $params = [
-            'reservation_id' => $reservation_id,
-            'order_id'       => $order_id,
-            'transaction_id' => 'exp-' . $order_id,
-            'value'          => $value,
-            'currency'       => $currency,
-            'event_id'       => uniqid('exp_paid_' . $reservation_id . '_', true),
-            'fp_source'      => 'experiences',
+            'reservation_id'   => $reservation_id,
+            'order_id'         => $order_id,
+            'transaction_id'   => 'exp-' . $order_id,
+            'value'            => $value,
+            'currency'         => $currency,
+            'event_id'         => uniqid('exp_paid_' . $reservation_id . '_', true),
+            'fp_source'        => 'experiences',
         ];
 
         if ($items !== []) {
@@ -286,7 +363,26 @@ final class WordPressIntegration {
             }
         }
 
-        do_action('fp_tracking_event', 'experience_paid', $this->enrichExperiencesBridgeParams($params, 'experience_paid', $order instanceof \WC_Order ? $order : null));
+        return $params;
+    }
+
+    private function persist_experience_paid_event_id(\WC_Order $order, int $reservation_id, string $event_id): void {
+        $map = $order->get_meta('_fp_track_exp_paid_event_ids', true);
+        if (!is_array($map)) {
+            $map = [];
+        }
+        $map[(string) $reservation_id] = $event_id;
+        $order->update_meta_data('_fp_track_exp_paid_event_ids', $map);
+        $order->save();
+    }
+
+    private function order_contains_fp_experience_items(\WC_Order $order): bool {
+        foreach ($order->get_items() as $item) {
+            if ($item instanceof \WC_Order_Item && $item->get_type() === 'fp_experience_item') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

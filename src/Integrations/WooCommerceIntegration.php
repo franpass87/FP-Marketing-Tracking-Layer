@@ -178,6 +178,11 @@ final class WooCommerceIntegration {
             ];
         }
 
+        // Solo righe WooCommerce "normali": ordini FP Experiences (fp_experience_item) → bridge `experience_paid`; gift → `gift_purchased`.
+        if ($items === []) {
+            return;
+        }
+
         do_action('fp_tracking_event', 'purchase', [
             'transaction_id' => (string) $order->get_id(),
             'value'          => (float) $order->get_total(),

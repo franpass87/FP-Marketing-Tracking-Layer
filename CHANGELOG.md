@@ -2,6 +2,15 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.32] - 2026-04-04
+
+### Fixed
+- **WooCommerce / thank you**: niente più `purchase` con `items` vuoti su ordini solo esperienza (righe `fp_experience_item` escluse dal payload WooCommerce — resta `experience_paid`).
+- **GTM / dataLayer**: su pagina “ordine ricevuto”, replay **solo browser** di `experience_paid` se `fp_exp_reservation_paid` era partito durante il POST checkout (stesso `event_id` da meta ordine; `fp_skip_server_dispatch` evita doppio MP/CAPI). Meta ordine `_fp_track_exp_ty_dl_sent` anti-refresh.
+
+### Changed
+- Parametro interno `fp_skip_server_dispatch` su `fp_tracking_event`: accoda al dataLayer senza `fp_tracking_server_side`.
+
 ## [1.2.31] - 2026-04-04
 
 ### Changed
