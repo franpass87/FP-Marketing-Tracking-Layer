@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.5.0] - 2026-04-23
+
+### Added
+- Export GTM: aggiunto tag HTML `FP - Ads Enhanced Conv. - Set user_data` che imposta globalmente `gtag('set', 'user_data', ...)` con email/phone normalizzati, attivato su tutti i trigger delle conversioni Ads con priorità 20. Abilita Enhanced Conversions in modo automatico e compatibile con l'import JSON GTM (nessuna variabile `awud`).
+
 ## [1.4.2] - 2026-04-23
 
 ### Changed

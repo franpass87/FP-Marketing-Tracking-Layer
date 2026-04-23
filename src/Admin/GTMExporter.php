@@ -356,6 +356,7 @@ final class GTMExporter {
         }
 
         // --- Google Ads Conversion tags ---
+        $ads_event_trigger_ids = [];
         if ($ads_google_tag_id !== '' && $ads_conversion_numeric_id !== '') {
             foreach (Settings::ADS_EVENTS as $event_name => $event_human_label) {
                 if (!isset($triggers[$event_name])) {
@@ -389,7 +390,40 @@ final class GTMExporter {
                     ],
                     'firingTriggerId' => [$triggers[$event_name]['triggerId']],
                 ];
+
+                $ads_event_trigger_ids[] = $triggers[$event_name]['triggerId'];
             }
+        }
+
+        // --- Google Ads Enhanced Conversions: set user_data globally before conversion tags ---
+        // Uses gtag('set','user_data',...) pattern (Google official). No awud variable needed.
+        // Higher priority than awct tags ensures user_data is set first.
+        if (!empty($ads_event_trigger_ids)) {
+            $enh_conv_html = "<script>(function(){\n"
+                . "  var email = {{" . $variables['email_address']['name'] . "}};\n"
+                . "  var phone = {{" . $variables['phone_number']['name'] . "}};\n"
+                . "  var data  = {};\n"
+                . "  if (email) { data.email = String(email).trim().toLowerCase(); }\n"
+                . "  if (phone) { data.phone_number = String(phone).replace(/[^0-9+]/g, ''); }\n"
+                . "  if (!data.email && !data.phone_number) { return; }\n"
+                . "  window.dataLayer = window.dataLayer || [];\n"
+                . "  window.gtag = window.gtag || function(){window.dataLayer.push(arguments)};\n"
+                . "  window.gtag('set', 'user_data', data);\n"
+                . "})();</script>";
+
+            $tags['ads_enhanced_conversions'] = [
+                'accountId'   => '0',
+                'containerId' => '0',
+                'tagId'       => (string) $id++,
+                'name'        => 'FP - Ads Enhanced Conv. - Set user_data',
+                'type'        => 'html',
+                'priority'    => ['type' => 'INTEGER', 'key' => 'priority', 'value' => '20'],
+                'parameter'   => [
+                    ['type' => 'TEMPLATE', 'key' => 'html', 'value' => $enh_conv_html],
+                    ['type' => 'BOOLEAN',  'key' => 'supportDocumentWrite', 'value' => 'false'],
+                ],
+                'firingTriggerId' => array_values(array_unique($ads_event_trigger_ids)),
+            ];
         }
 
         // --- Meta Pixel Base Code tag ---
