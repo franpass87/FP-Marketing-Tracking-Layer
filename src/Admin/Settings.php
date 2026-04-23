@@ -77,6 +77,7 @@ final class Settings {
         'gift_purchased'            => 'Gift Purchased (Experiences)',
         'gift_voucher_purchased'    => 'Gift Voucher Purchased (Discount-Gift)',
         'gift_card_redeemed'        => 'Gift Card Redeemed (Discount-Gift)',
+        'add_to_cart'               => 'Add To Cart (WooCommerce)',
         // Lead / Micro-conversioni
         'generate_lead'             => 'Generate Lead (Forms)',
         'rtb_submitted'             => 'RTB Submitted (Experiences)',

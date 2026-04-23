@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.3.0] - 2026-04-23
+
+### Added
+- Sezione Export Google Ads: aggiunto `add_to_cart` tra gli eventi `ADS_EVENTS`, con campo Conversion Label dedicato e inclusione automatica nel JSON GTM (`awct`) quando configurato.
+
 ## [1.2.35] - 2026-04-23
 
 ### Fixed
