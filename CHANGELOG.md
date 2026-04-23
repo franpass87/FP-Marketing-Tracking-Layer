@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.4.0] - 2026-04-23
+
+### Added
+- Export GTM: nuova variabile `FP - User Data - Ads Enhanced Conv.` (`awud`, MANUAL) alimentata da `email_address` / `phone_number` del dataLayer.
+- Export GTM: i tag `Google Ads Conversion Tracking` (`awct`) abilitano automaticamente `enableEnhancedConversions` + `userDataVariable` per aumentare l'attribuzione conversioni.
+
 ## [1.3.2] - 2026-04-23
 
 ### Added

@@ -175,6 +175,23 @@ final class GTMExporter {
             $vars[$param] = $this->make_datalayer_var($id++, $label, $param);
         }
 
+        // Google Ads Enhanced Conversions — user-provided data (MANUAL mode).
+        // Reads hashed-in-transit email/phone from dataLayer vars already present.
+        if ($ads_id !== '') {
+            $vars['ads_user_data'] = [
+                'accountId'   => '0',
+                'containerId' => '0',
+                'variableId'  => (string) $id++,
+                'name'        => 'FP - User Data - Ads Enhanced Conv.',
+                'type'        => 'awud',
+                'parameter'   => [
+                    ['type' => 'TEMPLATE', 'key' => 'mode',         'value' => 'MANUAL'],
+                    ['type' => 'TEMPLATE', 'key' => 'email',        'value' => '{{' . $vars['email_address']['name'] . '}}'],
+                    ['type' => 'TEMPLATE', 'key' => 'phone_number', 'value' => '{{' . $vars['phone_number']['name'] . '}}'],
+                ],
+            ];
+        }
+
         return $vars;
     }
 
@@ -372,21 +389,29 @@ final class GTMExporter {
                 // Use event label from EVENTS map if available, else fall back to ADS_EVENTS label
                 $tag_label = self::EVENTS[$event_name]['label'] ?? $event_human_label;
 
+                $ads_tag_parameters = [
+                    // awct accepts only numeric conversionId; AW- prefix is valid only for Google tagId.
+                    ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => $ads_conversion_numeric_id],
+                    ['type' => 'TEMPLATE', 'key' => 'conversionLabel', 'value' => $conversion_label],
+                    ['type' => 'TEMPLATE', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
+                    ['type' => 'TEMPLATE', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],
+                    ['type' => 'TEMPLATE', 'key' => 'orderId',         'value' => '{{' . $variables['transaction_id']['name'] . '}}'],
+                    ['type' => 'BOOLEAN',  'key' => 'enableNewCustomerReporting', 'value' => 'false'],
+                ];
+
+                // Enhanced Conversions: attach user-provided data variable when available.
+                if (isset($variables['ads_user_data'])) {
+                    $ads_tag_parameters[] = ['type' => 'BOOLEAN',  'key' => 'enableEnhancedConversions', 'value' => 'true'];
+                    $ads_tag_parameters[] = ['type' => 'TEMPLATE', 'key' => 'userDataVariable', 'value' => '{{' . $variables['ads_user_data']['name'] . '}}'];
+                }
+
                 $tags['ads_' . $event_name] = [
                     'accountId'   => '0',
                     'containerId' => '0',
                     'tagId'       => (string) $id++,
                     'name'        => 'FP - Google Ads - ' . $tag_label,
                     'type'        => 'awct',
-                    'parameter'   => [
-                        // awct accepts only numeric conversionId; AW- prefix is valid only for Google tagId.
-                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => $ads_conversion_numeric_id],
-                        ['type' => 'TEMPLATE', 'key' => 'conversionLabel', 'value' => $conversion_label],
-                        ['type' => 'TEMPLATE', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
-                        ['type' => 'TEMPLATE', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],
-                        ['type' => 'TEMPLATE', 'key' => 'orderId',         'value' => '{{' . $variables['transaction_id']['name'] . '}}'],
-                        ['type' => 'BOOLEAN',  'key' => 'enableNewCustomerReporting', 'value' => 'false'],
-                    ],
+                    'parameter'   => $ads_tag_parameters,
                     'firingTriggerId' => [$triggers[$event_name]['triggerId']],
                 ];
             }
