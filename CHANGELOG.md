@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.3.2] - 2026-04-23
+
+### Added
+- Sezione Export Google Ads: aggiunto `experience_checkout_started` tra gli eventi `ADS_EVENTS`, con campo Conversion Label dedicato e inclusione automatica nel JSON GTM (`awct`) quando configurato.
+
 ## [1.3.1] - 2026-04-23
 
 ### Added
