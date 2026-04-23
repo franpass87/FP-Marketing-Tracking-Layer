@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.4.2] - 2026-04-23
+
+### Changed
+- Export GTM: rimossa iniezione automatica della variabile `awud` e del flag `enableEnhancedConversions`/`userDataVariable` sui tag `awct` — il formato vendor template di GTM per Enhanced Conversions non è compatibile con un'importazione generica (l'import falliva con "You must select a user-provided data variable"). Enhanced Conversions va abilitato manualmente nel tag conversione dopo l'import.
+
 ## [1.4.1] - 2026-04-23
 
 ### Fixed
