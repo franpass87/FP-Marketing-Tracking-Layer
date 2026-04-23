@@ -2,6 +2,14 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.34] - 2026-04-23
+
+### Added
+- Export GTM: aggiunti automaticamente `FP - Google Tag - Ads Base` (`googtag`) e `FP - Conversion Linker` (`gclidw`) su tutte le pagine per supportare setup Google Ads anche senza Site Kit.
+
+### Fixed
+- Export GTM Google Ads Conversion: `conversionId` ora viene emesso come valore letterale `AW-...` (normalizzato) invece di variabile, riducendo warning di configurazione nel pannello GTM/Google Ads.
+
 ## [1.2.33] - 2026-04-04
 
 ### Added

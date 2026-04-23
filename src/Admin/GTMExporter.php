@@ -12,8 +12,9 @@ use FPTracking\Catalog\EventCatalog;
  * The export includes:
  *  - Variables: dataLayer variables for all event params + GA4/Ads/Meta IDs
  *  - Triggers:  one Custom Event trigger per tracked event
- *  - Tags:      GA4 Configuration, GA4 Event tags, Google Ads Conversion,
- *               Meta Pixel base + event tags, Consent Mode initialization
+ *  - Tags:      Google Tag (GA4 + Ads), Conversion Linker, GA4 Event tags,
+ *               Google Ads Conversion, Meta Pixel base + event tags,
+ *               Consent Mode initialization
  */
 final class GTMExporter {
 
@@ -261,6 +262,10 @@ final class GTMExporter {
     private function build_tags(string $ga4_id, string $ads_id, string $meta_id, array $triggers, array $variables): array {
         $tags = [];
         $id   = 200;
+        $ads_google_tag_id = strtoupper(trim($ads_id));
+        if ($ads_google_tag_id !== '' && strpos($ads_google_tag_id, 'AW-') !== 0) {
+            $ads_google_tag_id = 'AW-' . $ads_google_tag_id;
+        }
 
         // --- Consent Mode initialization tag (fires before everything) ---
         $tags['consent_init'] = [
@@ -280,6 +285,36 @@ final class GTMExporter {
             ],
             'firingTriggerId' => [$triggers['consent_init']['triggerId']],
         ];
+
+        // --- Google tag for Ads base (required by Google Ads diagnostics) ---
+        if ($ads_google_tag_id !== '') {
+            $tags['google_tag_ads'] = [
+                'accountId'   => '0',
+                'containerId' => '0',
+                'tagId'       => (string) $id++,
+                'name'        => 'FP - Google Tag - Ads Base',
+                'type'        => 'googtag',
+                'parameter'   => [
+                    ['type' => 'TEMPLATE', 'key' => 'tagId', 'value' => $ads_google_tag_id],
+                ],
+                'firingTriggerId' => [$triggers['all_pages']['triggerId']],
+            ];
+
+            // Required to preserve gclid/gbraid/wbraid attribution for Ads conversions.
+            $tags['conversion_linker'] = [
+                'accountId'   => '0',
+                'containerId' => '0',
+                'tagId'       => (string) $id++,
+                'name'        => 'FP - Conversion Linker',
+                'type'        => 'gclidw',
+                'parameter'   => [
+                    ['type' => 'BOOLEAN', 'key' => 'enableCrossDomainLinking', 'value' => 'false'],
+                    ['type' => 'BOOLEAN', 'key' => 'enableUrlPassthrough', 'value' => 'false'],
+                    ['type' => 'BOOLEAN', 'key' => 'enableEuidAutoMode', 'value' => 'false'],
+                ],
+                'firingTriggerId' => [$triggers['all_pages']['triggerId']],
+            ];
+        }
 
         // --- GA4 Configuration tag ---
         $tags['ga4_config'] = [
@@ -320,7 +355,7 @@ final class GTMExporter {
         }
 
         // --- Google Ads Conversion tags ---
-        if ($ads_id) {
+        if ($ads_google_tag_id !== '') {
             foreach (Settings::ADS_EVENTS as $event_name => $event_human_label) {
                 if (!isset($triggers[$event_name])) {
                     continue;
@@ -343,7 +378,7 @@ final class GTMExporter {
                     'name'        => 'FP - Google Ads - ' . $tag_label,
                     'type'        => 'awct',
                     'parameter'   => [
-                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => '{{' . $variables['ads_id']['name'] . '}}'],
+                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => $ads_google_tag_id],
                         ['type' => 'TEMPLATE', 'key' => 'conversionLabel', 'value' => $conversion_label],
                         ['type' => 'TEMPLATE', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
                         ['type' => 'TEMPLATE', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],
