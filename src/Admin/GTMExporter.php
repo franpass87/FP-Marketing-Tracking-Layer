@@ -266,6 +266,7 @@ final class GTMExporter {
         if ($ads_google_tag_id !== '' && strpos($ads_google_tag_id, 'AW-') !== 0) {
             $ads_google_tag_id = 'AW-' . $ads_google_tag_id;
         }
+        $ads_conversion_numeric_id = preg_replace('/\D+/', '', $ads_google_tag_id ?? '') ?: '';
 
         // --- Consent Mode initialization tag (fires before everything) ---
         $tags['consent_init'] = [
@@ -355,7 +356,7 @@ final class GTMExporter {
         }
 
         // --- Google Ads Conversion tags ---
-        if ($ads_google_tag_id !== '') {
+        if ($ads_google_tag_id !== '' && $ads_conversion_numeric_id !== '') {
             foreach (Settings::ADS_EVENTS as $event_name => $event_human_label) {
                 if (!isset($triggers[$event_name])) {
                     continue;
@@ -378,7 +379,8 @@ final class GTMExporter {
                     'name'        => 'FP - Google Ads - ' . $tag_label,
                     'type'        => 'awct',
                     'parameter'   => [
-                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => $ads_google_tag_id],
+                        // awct accepts only numeric conversionId; AW- prefix is valid only for Google tagId.
+                        ['type' => 'TEMPLATE', 'key' => 'conversionId',    'value' => $ads_conversion_numeric_id],
                         ['type' => 'TEMPLATE', 'key' => 'conversionLabel', 'value' => $conversion_label],
                         ['type' => 'TEMPLATE', 'key' => 'conversionValue', 'value' => '{{' . $variables['value']['name'] . '}}'],
                         ['type' => 'TEMPLATE', 'key' => 'currencyCode',    'value' => '{{' . $variables['currency']['name'] . '}}'],

@@ -2,13 +2,18 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.2.35] - 2026-04-23
+
+### Fixed
+- Export GTM Google Ads Conversion: `conversionId` dei tag `awct` ora viene esportato in formato numerico (es. `18092687675`) come richiesto da GTM, evitando l'errore di import "Questo valore deve essere un numero positivo o uno 0".
+
 ## [1.2.34] - 2026-04-23
 
 ### Added
 - Export GTM: aggiunti automaticamente `FP - Google Tag - Ads Base` (`googtag`) e `FP - Conversion Linker` (`gclidw`) su tutte le pagine per supportare setup Google Ads anche senza Site Kit.
 
 ### Fixed
-- Export GTM Google Ads Conversion: `conversionId` ora viene emesso come valore letterale `AW-...` (normalizzato) invece di variabile, riducendo warning di configurazione nel pannello GTM/Google Ads.
+- Export GTM Google Ads: normalizzazione dell'ID Ads per separare il `tagId` Google (`AW-...`) dai valori usati nei tag di conversione.
 
 ## [1.2.33] - 2026-04-04
 
