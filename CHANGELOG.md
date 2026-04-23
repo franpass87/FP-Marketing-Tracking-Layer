@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.4.1] - 2026-04-23
+
+### Fixed
+- Export GTM variabile `awud` (Enhanced Conversions): aggiunto campo `conversionId` numerico richiesto da GTM (l'import falliva con "Il valore non deve essere vuoto").
+
 ## [1.4.0] - 2026-04-23
 
 ### Added

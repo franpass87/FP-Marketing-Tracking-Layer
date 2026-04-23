@@ -177,7 +177,8 @@ final class GTMExporter {
 
         // Google Ads Enhanced Conversions — user-provided data (MANUAL mode).
         // Reads hashed-in-transit email/phone from dataLayer vars already present.
-        if ($ads_id !== '') {
+        $ads_numeric_id = preg_replace('/\D+/', '', (string) $ads_id) ?: '';
+        if ($ads_id !== '' && $ads_numeric_id !== '') {
             $vars['ads_user_data'] = [
                 'accountId'   => '0',
                 'containerId' => '0',
@@ -185,6 +186,8 @@ final class GTMExporter {
                 'name'        => 'FP - User Data - Ads Enhanced Conv.',
                 'type'        => 'awud',
                 'parameter'   => [
+                    // awud requires conversionId (numeric) to bind user data to the Ads account.
+                    ['type' => 'TEMPLATE', 'key' => 'conversionId', 'value' => $ads_numeric_id],
                     ['type' => 'TEMPLATE', 'key' => 'mode',         'value' => 'MANUAL'],
                     ['type' => 'TEMPLATE', 'key' => 'email',        'value' => '{{' . $vars['email_address']['name'] . '}}'],
                     ['type' => 'TEMPLATE', 'key' => 'phone_number', 'value' => '{{' . $vars['phone_number']['name'] . '}}'],
