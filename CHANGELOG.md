@@ -2,6 +2,15 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.5.1] - 2026-04-30
+
+### Fixed
+- **Meta Pixel + CAPI deduplica Purchase (e altri eventi Meta)**: l’export GTM generava `fbq('track', …, { …, eventID })` nel secondo oggetto; l’API Pixel richiede `eventID` nel **quarto** argomento (`fbq('track', nome, payload, { eventID })`). Senza questo, Events Manager segnala Purchase dal server non deduplicati. Corretto il template HTML dei tag Meta nell’export.
+- **WooCommerce `purchase`**: `event_id` stabile per ordine (`fp_woo_purchase_{order_id}`) così dataLayer, CAPI e Pixel restano allineati anche a refresh della thank-you page.
+
+### Changed
+- **`PurchaseEvent`**: `event_id` derivato dal `transaction_id` sanificato (`fp_purchase_*`) invece di includere `time()`, per coerenza deduplica su replay della stessa transazione.
+
 ## [1.5.0] - 2026-04-23
 
 ### Added

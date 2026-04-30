@@ -458,9 +458,10 @@ final class GTMExporter {
                     'add_to_cart', 'cart_abandoned', 'begin_checkout', 'form_payment_started',
                     'form_payment_completed',
                 ];
+                // eventID must be the 4th argument (options), not inside the payload object — required for CAPI deduplication.
                 $value_param = in_array($fp_event, $events_with_value, true)
-                    ? "fbq('track', '" . $meta_event . "', {value: {{" . $variables['value']['name'] . "}}, currency: {{" . $variables['currency']['name'] . "}} || 'EUR', eventID: {{" . $variables['event_id']['name'] . "}}});"
-                    : "fbq('track', '" . $meta_event . "', {eventID: {{" . $variables['event_id']['name'] . "}}});";
+                    ? "fbq('track', '" . $meta_event . "', {value: {{" . $variables['value']['name'] . "}}, currency: {{" . $variables['currency']['name'] . "}} || 'EUR'}, {eventID: {{" . $variables['event_id']['name'] . "}}});"
+                    : "fbq('track', '" . $meta_event . "', {}, {eventID: {{" . $variables['event_id']['name'] . "}}});";
 
                 $tags['meta_event_' . $fp_event] = [
                     'accountId'   => '0',

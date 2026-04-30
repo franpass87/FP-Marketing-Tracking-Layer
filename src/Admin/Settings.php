@@ -1055,7 +1055,7 @@ final class Settings {
                         <?php endif; ?>
                     </div>
                     <div class="fptracking-card-body">
-                    <p class="description"><?php esc_html_e('Eventi Meta nel browser passano da GTM (client-side). Qui configuri l\'invio server-side (CAPI): Pixel ID e Access Token. Utile per recuperare conversioni perse (iOS, ad-blocker). Deduplicazione automatica con event_id.', 'fp-tracking'); ?></p>
+                    <p class="description"><?php esc_html_e('Eventi Meta nel browser passano da GTM (client-side). Qui configuri l\'invio server-side (CAPI): Pixel ID e Access Token. Utile per recuperare conversioni perse (iOS, ad-blocker). Per deduplicare Pixel + CAPI, Meta richiede lo stesso event_id lato server e eventID nel fbq() del browser (4° argomento, non nel payload value/currency). Se Events Manager segnala Purchase non deduplicati, rigenera l\'export GTM da questa versione del plugin e re-importa il container, oppure aggiorna i tag HTML Meta in GTM di conseguenza.', 'fp-tracking'); ?></p>
                         <div class="fptracking-fields-grid">
                             <div class="fptracking-field">
                                 <label for="fp_tracking_meta_pixel_id"><?php esc_html_e('Meta Pixel ID', 'fp-tracking'); ?></label>

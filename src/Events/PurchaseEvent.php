@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace FPTracking\Events;
 
 /**
@@ -22,7 +24,9 @@ final class PurchaseEvent implements BaseEvent {
         private readonly array  $items = [],
         private readonly array  $extra = []
     ) {
-        $this->event_id = 'purchase_' . $transaction_id . '_' . time();
+        $cleaned = preg_replace('/[^A-Za-z0-9_-]/', '_', $this->transaction_id);
+        $safe_txn = (is_string($cleaned) && $cleaned !== '') ? $cleaned : 'txn';
+        $this->event_id = 'fp_purchase_' . $safe_txn;
     }
 
     public function event_name(): string {

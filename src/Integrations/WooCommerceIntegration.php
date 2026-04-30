@@ -183,6 +183,9 @@ final class WooCommerceIntegration {
             return;
         }
 
+        // Stable per order: same id on thank-you refresh, dataLayer + CAPI + fbq eventID must align.
+        $purchase_event_id = 'fp_woo_purchase_' . $order_id;
+
         do_action('fp_tracking_event', 'purchase', [
             'transaction_id' => (string) $order->get_id(),
             'value'          => (float) $order->get_total(),
@@ -191,7 +194,7 @@ final class WooCommerceIntegration {
             'currency'       => $order->get_currency(),
             'coupon'         => implode(',', $order->get_coupon_codes()),
             'items'          => $items,
-            'event_id'       => 'woo_purchase_' . $order_id . '_' . time(),
+            'event_id'       => $purchase_event_id,
             'fp_source'      => 'woocommerce',
             'user_data'      => [
                 'em' => $order->get_billing_email(),
