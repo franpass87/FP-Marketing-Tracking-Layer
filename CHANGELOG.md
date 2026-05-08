@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.5.2] - 2026-05-07
+
+### Added
+- **Queue Health (admin)**: pulsante «Elimina failed/dead dalla coda» con conferma browser — rimuove dal DB i job in stato `failed` e `dead` (non pending/processing/sent). Utile dopo aver risolto la causa degli errori per azzerare contatori e alert email senza rimetti in coda.
+
 ## [1.5.1] - 2026-04-30
 
 ### Fixed

@@ -159,6 +159,28 @@ final class EventQueueRepository {
         return is_int($result) ? $result : 0;
     }
 
+    /**
+     * Elimina dalla coda i job in errore non recuperabile (`dead`) o in attesa di retry (`failed`).
+     * Non tocca pending/processing/sent.
+     *
+     * @param int $max_rows Limite massimo di righe per operazione (sicurezza su DB grandi).
+     * @return int Numero di righe eliminate.
+     */
+    public function purge_failed_and_dead(int $max_rows = 10000): int {
+        $this->ensure_schema();
+        $table = $this->table_name();
+        $max_rows = max(1, min($max_rows, 100000));
+
+        $result = $this->db->query(
+            $this->db->prepare(
+                "DELETE FROM {$table} WHERE status IN ('failed','dead') LIMIT %d",
+                $max_rows
+            )
+        );
+
+        return is_int($result) ? $result : 0;
+    }
+
     public function release_stuck(int $older_than_seconds): void {
         $this->ensure_schema();
         $table = $this->table_name();

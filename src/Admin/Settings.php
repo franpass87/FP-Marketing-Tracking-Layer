@@ -258,6 +258,7 @@ final class Settings {
         add_action('admin_post_fp_tracking_export_gtm', [$this, 'handle_gtm_export']);
         add_action('admin_post_fp_tracking_save_ads_labels', [$this, 'handle_save_ads_labels']);
         add_action('admin_post_fp_tracking_retry_failed', [$this, 'handle_retry_failed']);
+        add_action('admin_post_fp_tracking_purge_queue', [$this, 'handle_purge_queue']);
         add_action('admin_post_fp_tracking_save_rules', [$this, 'handle_save_rules']);
         add_action('admin_post_fp_tracking_export_mapping', [$this, 'handle_export_mapping']);
         add_action('admin_post_fp_tracking_import_mapping', [$this, 'handle_import_mapping']);
@@ -500,6 +501,28 @@ final class Settings {
             'page' => 'fp-tracking',
             'updated' => 'retry_failed',
             'retried' => $retried,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    /**
+     * Elimina dalla tabella coda i record failed/dead (azione irreversibile).
+     */
+    public function handle_purge_queue(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized', 403);
+        }
+        check_admin_referer('fp_tracking_purge_queue');
+
+        $deleted = 0;
+        if ($this->queue instanceof EventQueueRepository) {
+            $deleted = $this->queue->purge_failed_and_dead(100000);
+        }
+
+        wp_redirect(add_query_arg([
+            'page'    => 'fp-tracking',
+            'updated' => 'queue_purged',
+            'deleted' => $deleted,
         ], admin_url('admin.php')));
         exit;
     }
@@ -813,6 +836,12 @@ final class Settings {
                 <?php printf(esc_html__('%d eventi falliti rimessi in coda.', 'fp-tracking'), (int) ($_GET['retried'] ?? 0)); ?>
             </div>
             <?php endif; ?>
+            <?php if (isset($_GET['updated']) && $_GET['updated'] === 'queue_purged'): ?>
+            <div class="fptracking-alert fptracking-alert-success">
+                <span class="dashicons dashicons-yes-alt"></span>
+                <?php printf(esc_html__('Eliminati %d record dalla coda (failed/dead).', 'fp-tracking'), (int) ($_GET['deleted'] ?? 0)); ?>
+            </div>
+            <?php endif; ?>
             <?php if (isset($_GET['updated']) && $_GET['updated'] === 'rules_saved'): ?>
             <div class="fptracking-alert fptracking-alert-success">
                 <span class="dashicons dashicons-yes-alt"></span>
@@ -935,7 +964,7 @@ final class Settings {
                     </div>
                 </div>
                 <div class="fptracking-card-body">
-                    <p class="description"><?php esc_html_e('Stato della coda eventi inviati a GA4/Meta/Brevo. Pending = in attesa; Failed/Dead = errori da verificare; Sent = inviati con successo. Usa il pulsante per rimettere in coda gli eventi falliti.', 'fp-tracking'); ?></p>
+                    <p class="description"><?php esc_html_e('Stato della coda eventi inviati a GA4/Meta/Brevo. Pending = in attesa; Failed/Dead = errori da verificare; Sent = inviati con successo. Rimetti in coda per riprovare l’invio; elimina per svuotare failed/dead dopo aver risolto la causa (azione irreversibile).', 'fp-tracking'); ?></p>
                     <div class="fptracking-status-bar">
                         <span class="fptracking-status-pill <?php echo (int) $queue_stats['pending'] > 0 ? 'is-missing' : 'is-active'; ?>">
                             <span class="dot"></span> <?php printf(esc_html__('Pending: %d', 'fp-tracking'), (int) $queue_stats['pending']); ?>
@@ -962,12 +991,21 @@ final class Settings {
                             <span class="dot"></span> <?php printf(esc_html__('Failed 7d: %d', 'fp-tracking'), (int) $queue_stats['failed_7d']); ?>
                         </span>
                     </div>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap">
                         <input type="hidden" name="action" value="fp_tracking_retry_failed">
                         <?php wp_nonce_field('fp_tracking_retry_failed'); ?>
                         <button type="submit" class="fptracking-btn fptracking-btn-secondary">
                             <span class="dashicons dashicons-update"></span>
                             <?php esc_html_e('Rimetti in coda eventi falliti/dead', 'fp-tracking'); ?>
+                        </button>
+                    </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="fptracking-form-top-gap"
+                        onsubmit="return window.confirm(<?php echo wp_json_encode(__('Eliminare definitivamente dalla coda tutti i record in stato failed e dead? Non sono recuperabili.', 'fp-tracking')); ?>);">
+                        <input type="hidden" name="action" value="fp_tracking_purge_queue">
+                        <?php wp_nonce_field('fp_tracking_purge_queue'); ?>
+                        <button type="submit" class="fptracking-btn fptracking-btn-secondary">
+                            <span class="dashicons dashicons-trash"></span>
+                            <?php esc_html_e('Elimina failed/dead dalla coda', 'fp-tracking'); ?>
                         </button>
                     </form>
                 </div>
