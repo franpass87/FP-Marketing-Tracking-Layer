@@ -48,19 +48,28 @@ final class MetaConversionsAPI {
         string $event_source_url = '',
         string $event_id = ''
     ): bool {
-        $this->last_error = '';
+        return $this->send_batch([
+            $this->build_event($event_name, $custom_data, $user_data, $event_source_url, $event_id),
+        ]);
+    }
 
-        if (!$this->is_enabled()) {
-            $this->last_error = 'Meta CAPI is disabled or not configured';
-            return false;
-        }
-
-        $pixel_id = $this->settings->get('meta_pixel_id');
-        $url = add_query_arg(
-            ['access_token' => $this->settings->get('meta_access_token')],
-            sprintf('%s/%s/%s/events', self::ENDPOINT, self::API_VERSION, $pixel_id)
-        );
-
+    /**
+     * Builds a Meta CAPI event payload.
+     *
+     * @param string $event_name       Meta standard event name.
+     * @param array  $custom_data      Event-specific custom data.
+     * @param array  $user_data        Raw user data, hashed before being returned.
+     * @param string $event_source_url Source URL for website events.
+     * @param string $event_id         Deduplication ID shared with the browser Pixel.
+     * @return array<string,mixed>
+     */
+    public function build_event(
+        string $event_name,
+        array $custom_data,
+        array $user_data,
+        string $event_source_url = '',
+        string $event_id = ''
+    ): array {
         // event_source_url is required for website action_source
         $source_url = $event_source_url
             ?: (isset($_SERVER['HTTP_REFERER']) ? sanitize_url(wp_unslash($_SERVER['HTTP_REFERER'])) : '')
@@ -80,7 +89,36 @@ final class MetaConversionsAPI {
             $event['event_id'] = $event_id;
         }
 
-        $body = ['data' => [$event]];
+        return $event;
+    }
+
+    /**
+     * Sends multiple events to Meta Conversions API in one request.
+     *
+     * @param array<int,array<string,mixed>> $events Prepared Meta CAPI events.
+     * @return bool
+     */
+    public function send_batch(array $events): bool {
+        $this->last_error = '';
+
+        if (!$this->is_enabled()) {
+            $this->last_error = 'Meta CAPI is disabled or not configured';
+            return false;
+        }
+
+        $events = array_values(array_filter($events, 'is_array'));
+        if ($events === []) {
+            $this->last_error = 'Meta CAPI batch is empty';
+            return false;
+        }
+
+        $pixel_id = $this->settings->get('meta_pixel_id');
+        $url = add_query_arg(
+            ['access_token' => $this->settings->get('meta_access_token')],
+            sprintf('%s/%s/%s/events', self::ENDPOINT, self::API_VERSION, $pixel_id)
+        );
+
+        $body = ['data' => $events];
 
         // test_event_code: only add when explicitly set (empty string would cause API errors).
         $test_code = (string) $this->settings->get('meta_test_event_code', '');
@@ -119,8 +157,12 @@ final class MetaConversionsAPI {
             return false;
         }
 
-        if (is_array($decoded) && isset($decoded['events_received']) && (int) $decoded['events_received'] < 1) {
-            $this->last_error = 'Meta accepted the request but reported 0 events_received';
+        if (is_array($decoded) && isset($decoded['events_received']) && (int) $decoded['events_received'] < count($events)) {
+            $this->last_error = sprintf(
+                'Meta accepted the request but reported %d/%d events_received',
+                (int) $decoded['events_received'],
+                count($events)
+            );
             $this->debug_log($this->last_error);
             return false;
         }

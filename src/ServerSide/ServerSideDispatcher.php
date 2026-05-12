@@ -47,6 +47,79 @@ final class ServerSideDispatcher {
     }
 
     /**
+     * Dispatches a queue batch, grouping Meta CAPI events into one HTTP request.
+     *
+     * GA4 Measurement Protocol and Brevo remain per-job because their APIs and
+     * identifiers are independent, while Meta supports multiple events in the
+     * `data` array for the same Pixel.
+     *
+     * @param array<int,array{id:int,event_name:string,payload:array,attempts:int,max_attempts:int}> $jobs Claimed queue jobs.
+     * @return array<int,array{ok:bool,attempted:int,error:string}> Results keyed by queue job ID.
+     */
+    public function dispatch_batch_with_result(array $jobs): array {
+        $results = [];
+        $meta_events = [];
+        $meta_job_ids = [];
+
+        foreach ($jobs as $job) {
+            $id = (int) ($job['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $event_name = (string) ($job['event_name'] ?? '');
+            $params = isset($job['payload']) && is_array($job['payload']) ? $job['payload'] : [];
+            $event_id = (string) ($params['event_id'] ?? uniqid('fp_', true));
+            $client_id = GA4MeasurementProtocol::extract_client_id();
+            $user_data = $params['user_data'] ?? [];
+            $attempted = 0;
+            $errors = [];
+
+            $ga4_params = $this->build_ga4_params($event_name, $params);
+            if ($this->ga4->is_enabled() && $this->channel_consent_granted('ga4', $event_name, $params)) {
+                $attempted++;
+                if (!$this->ga4->send($event_name, $ga4_params, $client_id, $event_id, $user_data)) {
+                    $errors[] = 'GA4 send failed';
+                }
+            }
+
+            if ($this->brevo->is_enabled() && $this->channel_consent_granted('brevo', $event_name, $params)) {
+                $attempted++;
+                if (!$this->brevo->dispatch($event_name, $params)) {
+                    $errors[] = 'Brevo send failed';
+                }
+            }
+
+            $meta_event = self::META_EVENT_MAP[$event_name] ?? null;
+            if ($meta_event !== null && $this->meta->is_enabled() && $this->channel_consent_granted('meta', $event_name, $params)) {
+                $attempted++;
+                $meta_custom = $this->build_meta_custom($event_name, $params);
+                $source_url = (string) ($params['page_url'] ?? $params['event_source_url'] ?? '');
+                $meta_events[] = $this->meta->build_event($meta_event, $meta_custom, $user_data, $source_url, $event_id);
+                $meta_job_ids[] = $id;
+            }
+
+            $results[$id] = [
+                'ok' => $errors === [],
+                'attempted' => $attempted,
+                'error' => implode('; ', $errors),
+            ];
+        }
+
+        if ($meta_events !== [] && !$this->meta->send_batch($meta_events)) {
+            $meta_error = $this->meta->last_error();
+            $message = $meta_error !== '' ? 'Meta batch send failed: ' . $meta_error : 'Meta batch send failed';
+            foreach ($meta_job_ids as $id) {
+                $current = $results[$id]['error'] ?? '';
+                $results[$id]['ok'] = false;
+                $results[$id]['error'] = $current !== '' ? $current . '; ' . $message : $message;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
      * Dispatches and returns structured outcome for queue worker.
      *
      * @return array{ok:bool,attempted:int,error:string}

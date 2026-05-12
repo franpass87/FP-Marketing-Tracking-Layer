@@ -2,6 +2,14 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.8.0] - 2026-05-12
+
+### Added
+- **Meta CAPI batch dispatch**: il queue worker raggruppa gli eventi Meta eleggibili del batch cron e li invia in un'unica chiamata Conversions API, riducendo overhead HTTP e rischio rate-limit.
+
+### Changed
+- **Queue worker server-side**: GA4 MP e Brevo restano per-job, mentre Meta CAPI viene processato a batch mantenendo gli stessi controlli consenso, `event_id` di deduplica e gestione retry/dead della coda.
+
 ## [1.7.0] - 2026-05-12
 
 ### Added

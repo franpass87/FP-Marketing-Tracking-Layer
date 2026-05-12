@@ -20,38 +20,51 @@ final class QueueWorker {
             return;
         }
 
+        try {
+            $results = $this->dispatcher->dispatch_batch_with_result($jobs);
+        } catch (\Throwable $e) {
+            foreach ($jobs as $job) {
+                $this->mark_failed_job($job, $e->getMessage());
+            }
+            return;
+        }
+
         foreach ($jobs as $job) {
             $id = (int) $job['id'];
-            $attempts = (int) $job['attempts'] + 1;
-            $maxAttempts = (int) $job['max_attempts'];
-            $eventName = (string) $job['event_name'];
-            $payload = (array) $job['payload'];
 
-            try {
-                $result = $this->dispatcher->dispatch_with_result($eventName, $payload);
-                if ($result['ok']) {
-                    $this->queue->mark_sent($id);
-                    continue;
-                }
+            $result = $results[$id] ?? [
+                'ok' => false,
+                'error' => 'Dispatch result missing',
+            ];
 
-                $error = (string) ($result['error'] ?? 'Dispatch failed');
-                if ($attempts >= $maxAttempts) {
-                    $this->queue->mark_dead($id, $attempts, $error);
-                    continue;
-                }
-
-                $delay = $this->retryPolicy->next_delay_seconds($attempts);
-                $this->queue->mark_retry($id, $attempts, $delay, $error);
-            } catch (\Throwable $e) {
-                if ($attempts >= $maxAttempts) {
-                    $this->queue->mark_dead($id, $attempts, $e->getMessage());
-                    continue;
-                }
-
-                $delay = $this->retryPolicy->next_delay_seconds($attempts);
-                $this->queue->mark_retry($id, $attempts, $delay, $e->getMessage());
+            if (!empty($result['ok'])) {
+                $this->queue->mark_sent($id);
+                continue;
             }
+
+            $this->mark_failed_job($job, (string) ($result['error'] ?? 'Dispatch failed'));
         }
+    }
+
+    /**
+     * Marks a claimed queue job for retry or dead status.
+     *
+     * @param array{id:int,event_name:string,payload:array,attempts:int,max_attempts:int} $job Queue job.
+     * @param string $error Error message to persist.
+     * @return void
+     */
+    private function mark_failed_job(array $job, string $error): void {
+        $id = (int) $job['id'];
+        $attempts = (int) $job['attempts'] + 1;
+        $maxAttempts = (int) $job['max_attempts'];
+
+        if ($attempts >= $maxAttempts) {
+            $this->queue->mark_dead($id, $attempts, $error);
+            return;
+        }
+
+        $delay = $this->retryPolicy->next_delay_seconds($attempts);
+        $this->queue->mark_retry($id, $attempts, $delay, $error);
     }
 }
 
