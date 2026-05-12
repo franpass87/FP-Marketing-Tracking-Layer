@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -45,6 +45,7 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 - **Click puramente client (es. CTA bar, link bio)**: la fonte consigliata per GA4/Meta in GTM è il **browser** (`CustomEvent` / dataLayer). L’enqueue server-side dedicato a quei click è opzionale e va usato solo se serve esplicitamente CAPI/MP oltre al client, con attenzione alla deduplica (`event_id`).
 - **Meta Pixel + CAPI**: lo stesso `event_id` deve arrivare al CAPI (server) e come `eventID` nel `fbq('track', …, payload, { eventID })` del browser. L’export GTM dal plugin ≥ 1.5.1 usa la firma corretta; con container importati da versioni precedenti, rigenera l’export o aggiorna i tag Meta in GTM.
 - **Meta CAPI batch**: il cron worker raggruppa gli eventi Meta del batch coda in una sola chiamata Conversions API, mantenendo deduplica e retry della coda.
+- **Storico esiti Meta CAPI**: l'admin mostra gli ultimi invii Meta con stato, HTTP status, eventi inviati/ricevuti ed eventuale errore/`fbtrace_id`, senza esporre payload raw o token.
 - **Meta Event Match Quality**: gli eventi CAPI in coda conservano i match key della richiesta originale (`client_ip_address`, `client_user_agent`, `_fbp`, `_fbc` e PII hashata quando disponibile). Se Meta segnala punteggio basso, verifica che i form raccolgano email/telefono e che il consenso marketing consenta il Pixel/GTM browser.
 - **Consenso server-side granulare**: GA4 MP richiede consenso `statistics`, Meta CAPI richiede `marketing`, Brevo usa la finalità configurata in admin (`marketing`, `statistics` o nessun gate). Con FP Privacy attivo viene letto il consenso salvato; senza FP Privacy vale lo stato `consent_default`.
 

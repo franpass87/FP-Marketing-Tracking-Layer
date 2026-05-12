@@ -8,6 +8,7 @@ use FPTracking\Audit\ConsentAuditService;
 use FPTracking\Catalog\EventCatalog;
 use FPTracking\Health\EventHealthService;
 use FPTracking\Inspector\EventInspector;
+use FPTracking\Inspector\MetaOutcomeHistory;
 use FPTracking\Queue\EventQueueRepository;
 use FPTracking\Rules\EventRuleEngine;
 use FPTracking\Validation\EventValidator;
@@ -733,6 +734,7 @@ final class Settings {
         $inspector    = new EventInspector();
         $inspectorEvents = $inspector->recent(10);
         $matchQualityRows = $inspector->recent_match_quality(10);
+        $metaOutcomeRows = (new MetaOutcomeHistory())->recent(20);
         $ruleEngine   = new EventRuleEngine();
         $rulesData    = $ruleEngine->get_rules();
         $consentAudit = new ConsentAuditService();
@@ -1624,6 +1626,55 @@ final class Settings {
                                     <td><?php printf(esc_html__('%1$d/%2$d', 'fp-tracking'), (int) ($row['score'] ?? 0), (int) ($row['max_score'] ?? 0)); ?></td>
                                     <td><?php echo esc_html(implode(', ', array_map('strval', (array) ($row['present'] ?? [])))); ?></td>
                                     <td><?php echo esc_html(implode(', ', array_map('strval', (array) ($row['missing'] ?? [])))); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                    <p class="fptracking-section-title"><?php esc_html_e('Storico esiti Meta CAPI', 'fp-tracking'); ?></p>
+                    <?php if ($metaOutcomeRows === []): ?>
+                        <div class="fptracking-empty-ok">
+                            <span class="dashicons dashicons-info-outline"></span>
+                            <p><?php esc_html_e('Nessun esito Meta CAPI registrato. La tabella si popolerà dopo il prossimo invio server-side verso Meta.', 'fp-tracking'); ?></p>
+                        </div>
+                    <?php else: ?>
+                        <table class="fptracking-table">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Quando', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Stato', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('HTTP', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Eventi', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Ricevuti', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Nomi evento', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Errore / Trace', 'fp-tracking'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($metaOutcomeRows as $row): ?>
+                                <?php
+                                $ok = !empty($row['ok']);
+                                $eventNames = implode(', ', array_map('strval', (array) ($row['event_names'] ?? [])));
+                                $error = (string) ($row['error'] ?? '');
+                                $trace = (string) ($row['fbtrace_id'] ?? '');
+                                ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) ($row['timestamp'] ?? '')); ?></td>
+                                    <td>
+                                        <span class="fptracking-badge <?php echo $ok ? 'fptracking-badge-success' : 'fptracking-badge-warning'; ?>">
+                                            <?php echo $ok ? esc_html__('OK', 'fp-tracking') : esc_html__('Errore', 'fp-tracking'); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo esc_html((string) ((int) ($row['http_status'] ?? 0) ?: '-')); ?></td>
+                                    <td><?php echo esc_html((string) (int) ($row['events_count'] ?? 0)); ?></td>
+                                    <td><?php echo esc_html((string) (int) ($row['events_received'] ?? 0)); ?></td>
+                                    <td><code><?php echo esc_html($eventNames !== '' ? $eventNames : '-'); ?></code></td>
+                                    <td>
+                                        <?php echo esc_html($error !== '' ? $error : '-'); ?>
+                                        <?php if ($trace !== ''): ?>
+                                            <br><code><?php echo esc_html($trace); ?></code>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             </tbody>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace FPTracking\ServerSide;
 
 use FPTracking\Admin\Settings;
+use FPTracking\Inspector\MetaOutcomeHistory;
 
 /**
  * Sends events to Meta Conversions API v21.0.
@@ -15,8 +16,11 @@ final class MetaConversionsAPI {
     private const API_VERSION = 'v21.0';
     private const ENDPOINT    = 'https://graph.facebook.com';
     private string $last_error = '';
+    private MetaOutcomeHistory $outcomes;
 
-    public function __construct(private readonly Settings $settings) {}
+    public function __construct(private readonly Settings $settings) {
+        $this->outcomes = new MetaOutcomeHistory();
+    }
 
     public function is_enabled(): bool {
         return !empty($this->settings->get('meta_pixel_id'))
@@ -103,12 +107,14 @@ final class MetaConversionsAPI {
 
         if (!$this->is_enabled()) {
             $this->last_error = 'Meta CAPI is disabled or not configured';
+            $this->record_outcome(false, 0, [], null, $this->last_error);
             return false;
         }
 
         $events = array_values(array_filter($events, 'is_array'));
         if ($events === []) {
             $this->last_error = 'Meta CAPI batch is empty';
+            $this->record_outcome(false, 0, [], null, $this->last_error);
             return false;
         }
 
@@ -137,6 +143,7 @@ final class MetaConversionsAPI {
 
         if (is_wp_error($response)) {
             $this->last_error = 'Transport error: ' . $response->get_error_message();
+            $this->record_outcome(false, 0, $events, null, $this->last_error, $test_code);
             $this->debug_log($this->last_error);
             return false;
         }
@@ -147,12 +154,14 @@ final class MetaConversionsAPI {
 
         if ($status < 200 || $status >= 300) {
             $this->last_error = 'HTTP ' . $status . ': ' . $this->extract_api_error($decoded, $raw_body);
+            $this->record_outcome(false, $status, $events, $decoded, $this->last_error, $test_code);
             $this->debug_log($this->last_error);
             return false;
         }
 
         if (is_array($decoded) && isset($decoded['error'])) {
             $this->last_error = $this->extract_api_error($decoded, $raw_body);
+            $this->record_outcome(false, $status, $events, $decoded, $this->last_error, $test_code);
             $this->debug_log($this->last_error);
             return false;
         }
@@ -163,9 +172,12 @@ final class MetaConversionsAPI {
                 (int) $decoded['events_received'],
                 count($events)
             );
+            $this->record_outcome(false, $status, $events, $decoded, $this->last_error, $test_code);
             $this->debug_log($this->last_error);
             return false;
         }
+
+        $this->record_outcome(true, $status, $events, $decoded, '', $test_code);
 
         return true;
     }
@@ -251,6 +263,17 @@ final class MetaConversionsAPI {
         }
 
         return substr(sanitize_text_field($raw_body !== '' ? $raw_body : 'Empty Meta API response'), 0, 300);
+    }
+
+    /**
+     * Stores a compact Meta CAPI outcome for troubleshooting.
+     *
+     * @param array<int,array<string,mixed>> $events Sent Meta events.
+     * @param mixed $decoded Decoded Meta response.
+     * @return void
+     */
+    private function record_outcome(bool $ok, int $http_status, array $events, mixed $decoded, string $error = '', string $test_code = ''): void {
+        $this->outcomes->record($ok, $http_status, $events, $decoded, $error, $test_code);
     }
 
     /**

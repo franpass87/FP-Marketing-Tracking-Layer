@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.9.0] - 2026-05-12
+
+### Added
+- **Storico esiti Meta CAPI**: aggiunto log diagnostico degli ultimi invii Meta con stato OK/errore, HTTP status, eventi inviati/ricevuti, nomi evento, errore sanitizzato e `fbtrace_id` quando disponibile.
+- **Admin diagnostics**: il pannello Validator/Event Inspector mostra lo storico Meta CAPI accanto alla match quality, senza esporre payload raw, token o dati personali.
+
 ## [1.8.0] - 2026-05-12
 
 ### Added
