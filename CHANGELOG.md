@@ -2,6 +2,17 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.6.0] - 2026-05-12
+
+### Added
+- **Meta CAPI diagnostics**: aggiunto campo admin `Meta Test Event Code` e pannello **Meta Event Match Quality** nell'Event Inspector, con riepilogo dei match key presenti/mancanti negli ultimi eventi campionati.
+- **Consenso server-side**: il dispatch server-side ora rispetta il consenso marketing corrente (FP Privacy se disponibile, altrimenti `consent_default`) prima di accodare conversioni CAPI/MP.
+
+### Changed
+- **Meta CAPI queue worker**: invio HTTP blocking con verifica status/body; la coda ora marca retry/dead quando Meta rifiuta l'evento invece di considerare sempre riuscito l'invio.
+- **Meta user_data normalization**: email, telefono, città/stato/CAP/country vengono normalizzati prima dell'hash SHA-256 per migliorare coerenza e match quality.
+- **FP Experiences bridge**: `experience_paid` e `gift_purchased` arricchiscono `user_data` dai dati billing dell'ordine WooCommerce quando disponibili.
+
 ## [1.5.3] - 2026-05-12
 
 ### Fixed

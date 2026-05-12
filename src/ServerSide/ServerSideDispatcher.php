@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace FPTracking\ServerSide;
 
@@ -75,7 +76,8 @@ final class ServerSideDispatcher {
             $meta_custom    = $this->build_meta_custom($event_name, $params);
             $source_url     = (string) ($params['page_url'] ?? $params['event_source_url'] ?? '');
             if (!$this->meta->send($meta_event, $meta_custom, $user_data, $source_url, $event_id)) {
-                $errors[] = 'Meta send failed';
+                $meta_error = $this->meta->last_error();
+                $errors[] = $meta_error !== '' ? 'Meta send failed: ' . $meta_error : 'Meta send failed';
             }
         }
 

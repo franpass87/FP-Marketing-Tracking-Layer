@@ -2,7 +2,7 @@
 
 Layer centralizzato per il tracking marketing. Inietta GTM, gestisce Consent Mode v2, riceve eventi da tutti i plugin FP e li instrada verso GA4 Measurement Protocol e Meta Conversions API (server-side).
 
-[![Version](https://img.shields.io/badge/version-1.5.3-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/franpass87/FP-Marketing-Tracking-Layer)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 
 ---
@@ -22,6 +22,7 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 - **UTM Cookie Handler**: salvataggio e lettura parametri UTM per attribuzione
 - **Queue affidabile**: coda persistente con retry/backoff, replay manuale, eliminazione failed/dead da admin e health metrics
 - **Rule Engine + Inspector**: regole no-code eventi, validator e audit operativo
+- **Meta diagnostics**: Test Event Code configurabile, verifica risposta CAPI e riepilogo Event Match Quality in admin
 - **Catalogo eventi centralizzato**: sorgente unica per eventi, mapping Meta, required fields e server-side eligibility
 - **Catalog Health**: pannello admin di coerenza catalogo + export JSON con fingerprint SHA256 per QA
 
@@ -44,6 +45,7 @@ FP Marketing Tracking Layer è il punto centrale di raccolta e distribuzione deg
 - **Click puramente client (es. CTA bar, link bio)**: la fonte consigliata per GA4/Meta in GTM è il **browser** (`CustomEvent` / dataLayer). L’enqueue server-side dedicato a quei click è opzionale e va usato solo se serve esplicitamente CAPI/MP oltre al client, con attenzione alla deduplica (`event_id`).
 - **Meta Pixel + CAPI**: lo stesso `event_id` deve arrivare al CAPI (server) e come `eventID` nel `fbq('track', …, payload, { eventID })` del browser. L’export GTM dal plugin ≥ 1.5.1 usa la firma corretta; con container importati da versioni precedenti, rigenera l’export o aggiorna i tag Meta in GTM.
 - **Meta Event Match Quality**: gli eventi CAPI in coda conservano i match key della richiesta originale (`client_ip_address`, `client_user_agent`, `_fbp`, `_fbc` e PII hashata quando disponibile). Se Meta segnala punteggio basso, verifica che i form raccolgano email/telefono e che il consenso marketing consenta il Pixel/GTM browser.
+- **Consenso server-side**: gli eventi server-side vengono accodati solo se il consenso marketing è valido. Con FP Privacy attivo viene letto il consenso salvato; senza FP Privacy vale lo stato `consent_default`.
 
 ### Requisiti
 - WordPress 6.0+
@@ -211,6 +213,8 @@ gtag('consent', 'update', {
 | `fp_tracking_server_side` | action | Trigger interno per dispatch server-side (GA4 MP / Meta CAPI) |
 | `fp_tracking_event_payload` | filter | Modifica il payload evento normalizzato prima del push in coda |
 | `fp_tracking_server_side_enabled` | filter | Abilita/disabilita invio server-side per singolo evento |
+| `fp_tracking_server_side_consent_required` | filter | Abilita/disabilita il requisito di consenso marketing per il server-side |
+| `fp_tracking_server_side_has_consent` | filter | Override finale del consenso server-side calcolato dal layer |
 | `fp_tracking_meta_test_event_code` | filter | Imposta `test_event_code` per debug Meta CAPI |
 | `fp_tracking_registered_integrations` | filter | Popola l'elenco integrazioni mostrato in admin |
 | `fp_tracking_queue_worker` | action | Hook cron worker coda server-side |

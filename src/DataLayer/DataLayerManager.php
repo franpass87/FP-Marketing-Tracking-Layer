@@ -70,7 +70,9 @@ final class DataLayerManager {
             $params['event_id'] = uniqid('fp_', true);
         }
 
-        $server_side_event = !$skip_server_dispatch && $this->is_server_side_event($event_name);
+        $server_side_event = !$skip_server_dispatch
+            && $this->is_server_side_event($event_name)
+            && $this->has_server_side_consent($event_name);
         if ($server_side_event) {
             $params = $this->with_server_side_user_data($params);
         }
@@ -140,6 +142,54 @@ final class DataLayerManager {
     private function is_server_side_event(string $event_name): bool {
         return in_array($event_name, EventCatalog::SERVER_SIDE_EVENTS, true)
             && apply_filters('fp_tracking_server_side_enabled', true, $event_name);
+    }
+
+    /**
+     * Public consent gate for direct server-side enqueue paths.
+     */
+    public function server_side_consent_granted(string $event_name): bool {
+        return $this->has_server_side_consent($event_name);
+    }
+
+    /**
+     * Checks whether server-side tracking is allowed by the current consent state.
+     */
+    private function has_server_side_consent(string $event_name): bool {
+        $required = (bool) apply_filters('fp_tracking_server_side_consent_required', true, $event_name);
+        if (!$required) {
+            return true;
+        }
+
+        $allowed = $this->current_marketing_consent_granted();
+
+        return (bool) apply_filters('fp_tracking_server_side_has_consent', $allowed, $event_name);
+    }
+
+    /**
+     * Resolves marketing consent from FP Privacy when available, otherwise from this plugin default.
+     */
+    private function current_marketing_consent_granted(): bool {
+        if (class_exists('\FP\Privacy\Frontend\ConsentCookieManager') && class_exists('\FP\Privacy\Consent\LogModel')) {
+            try {
+                $cookie = \FP\Privacy\Frontend\ConsentCookieManager::get_cookie_payload();
+                $consent_id = is_array($cookie) ? (string) ($cookie['id'] ?? '') : '';
+                if ($consent_id === '') {
+                    return false;
+                }
+
+                $record = (new \FP\Privacy\Consent\LogModel())->find_latest_by_consent_id($consent_id);
+                if (!is_array($record)) {
+                    return false;
+                }
+
+                $states = isset($record['states']) && is_array($record['states']) ? $record['states'] : [];
+                return !empty($states['marketing']);
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return (string) $this->settings->get('consent_default', 'denied') === 'granted';
     }
 
     /**

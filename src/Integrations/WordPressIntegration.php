@@ -471,6 +471,10 @@ final class WordPressIntegration {
 
         if ($order instanceof \WC_Order) {
             $params['page_url'] = $order->get_checkout_order_received_url();
+            $params['user_data'] = $this->merge_user_data(
+                isset($params['user_data']) && is_array($params['user_data']) ? $params['user_data'] : [],
+                $this->extract_order_user_data($order)
+            );
         } elseif (empty($params['page_url']) && isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])) {
             $params['page_url'] = home_url(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_URI'])));
         }
@@ -479,6 +483,41 @@ final class WordPressIntegration {
         $out = apply_filters('fp_tracking_experiences_bridge_params', $params, $context);
 
         return $out;
+    }
+
+    /**
+     * Extracts Meta match data from a WooCommerce order.
+     *
+     * @return array<string, string>
+     */
+    private function extract_order_user_data(\WC_Order $order): array {
+        return $this->filter_user_data([
+            'em'      => sanitize_email($order->get_billing_email()),
+            'fn'      => sanitize_text_field($order->get_billing_first_name()),
+            'ln'      => sanitize_text_field($order->get_billing_last_name()),
+            'ph'      => $this->normalize_phone((string) $order->get_billing_phone()),
+            'ct'      => sanitize_text_field($order->get_billing_city()),
+            'st'      => sanitize_text_field($order->get_billing_state()),
+            'zp'      => sanitize_text_field($order->get_billing_postcode()),
+            'country' => sanitize_text_field($order->get_billing_country()),
+        ]);
+    }
+
+    /**
+     * Merges fallback user_data without overriding caller-provided values.
+     *
+     * @param array<string, mixed>  $primary  Existing user_data.
+     * @param array<string, string> $fallback Fallback fields.
+     * @return array<string, mixed>
+     */
+    private function merge_user_data(array $primary, array $fallback): array {
+        foreach ($fallback as $key => $value) {
+            if ($value !== '' && empty($primary[$key])) {
+                $primary[$key] = $value;
+            }
+        }
+
+        return $this->filter_user_data($primary);
     }
 
     private function extract_gf_user_data(array $entry, array $form): array {
@@ -697,10 +736,18 @@ final class WordPressIntegration {
             $value = implode(' ', array_map('strval', $value));
         }
 
-        $phone = preg_replace('/[^0-9+]/', '', (string) $value);
-        if (is_string($phone) && $phone !== '' && empty($user_data['ph'])) {
+        $phone = $this->normalize_phone((string) $value);
+        if ($phone !== '' && empty($user_data['ph'])) {
             $user_data['ph'] = $phone;
         }
+    }
+
+    /**
+     * Normalizes phone values for Meta CAPI matching.
+     */
+    private function normalize_phone(string $value): string {
+        $phone = preg_replace('/[^0-9+]/', '', $value);
+        return is_string($phone) ? $phone : '';
     }
 
     /**

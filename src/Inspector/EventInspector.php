@@ -8,6 +8,7 @@ final class EventInspector {
 
     private const OPTION_KEY = 'fp_tracking_event_inspector';
     private const MAX_ITEMS = 300;
+    private const MATCH_KEYS = ['em', 'ph', 'fn', 'ln', 'ct', 'st', 'zp', 'country', 'fbp', 'fbc', 'client_ip_address', 'client_user_agent', 'external_id'];
 
     /**
      * @param array<string,mixed> $payload
@@ -47,6 +48,45 @@ final class EventInspector {
             return [];
         }
         return array_slice($items, 0, max(1, min($limit, self::MAX_ITEMS)));
+    }
+
+    /**
+     * Returns a compact diagnostic view of Meta match keys found in sampled events.
+     *
+     * @return array<int,array{timestamp:string,event:string,score:int,max_score:int,present:list<string>,missing:list<string>}>
+     */
+    public function recent_match_quality(int $limit = 20): array {
+        $rows = [];
+
+        foreach ($this->recent($limit) as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $payload = isset($item['payload']) && is_array($item['payload']) ? $item['payload'] : [];
+            $user_data = isset($payload['user_data']) && is_array($payload['user_data']) ? $payload['user_data'] : [];
+            $present = [];
+            $missing = [];
+
+            foreach (self::MATCH_KEYS as $key) {
+                if (array_key_exists($key, $user_data)) {
+                    $present[] = $key;
+                } else {
+                    $missing[] = $key;
+                }
+            }
+
+            $rows[] = [
+                'timestamp' => sanitize_text_field((string) ($item['timestamp'] ?? '')),
+                'event' => sanitize_key((string) ($item['event'] ?? '')),
+                'score' => count($present),
+                'max_score' => count(self::MATCH_KEYS),
+                'present' => $present,
+                'missing' => $missing,
+            ];
+        }
+
+        return $rows;
     }
 
     /**

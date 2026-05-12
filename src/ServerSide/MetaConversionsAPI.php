@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace FPTracking\ServerSide;
 
@@ -13,6 +14,7 @@ final class MetaConversionsAPI {
 
     private const API_VERSION = 'v21.0';
     private const ENDPOINT    = 'https://graph.facebook.com';
+    private string $last_error = '';
 
     public function __construct(private readonly Settings $settings) {}
 
@@ -20,6 +22,13 @@ final class MetaConversionsAPI {
         return !empty($this->settings->get('meta_pixel_id'))
             && !empty($this->settings->get('meta_access_token'))
             && (bool) $this->settings->get('server_side_meta', true);
+    }
+
+    /**
+     * Returns the last transport or API error produced by send().
+     */
+    public function last_error(): string {
+        return $this->last_error;
     }
 
     /**
@@ -39,7 +48,10 @@ final class MetaConversionsAPI {
         string $event_source_url = '',
         string $event_id = ''
     ): bool {
+        $this->last_error = '';
+
         if (!$this->is_enabled()) {
+            $this->last_error = 'Meta CAPI is disabled or not configured';
             return false;
         }
 
@@ -70,22 +82,48 @@ final class MetaConversionsAPI {
 
         $body = ['data' => [$event]];
 
-        // test_event_code: only add when explicitly set (empty string would cause API errors)
-        if ($this->settings->get('debug_mode', false)) {
-            $test_code = (string) apply_filters('fp_tracking_meta_test_event_code', '');
-            if ($test_code !== '') {
-                $body['test_event_code'] = $test_code;
-            }
+        // test_event_code: only add when explicitly set (empty string would cause API errors).
+        $test_code = (string) $this->settings->get('meta_test_event_code', '');
+        $test_code = (string) apply_filters('fp_tracking_meta_test_event_code', $test_code);
+        if ($test_code !== '') {
+            $body['test_event_code'] = sanitize_text_field($test_code);
         }
 
-        // Use non-blocking for performance; errors are logged only in debug mode
-        wp_remote_post($url, [
+        $response = wp_remote_post($url, [
             'headers'     => ['Content-Type' => 'application/json'],
             'body'        => wp_json_encode($body),
-            'timeout'     => 5,
-            'blocking'    => false,
+            'timeout'     => 10,
+            'blocking'    => true,
             'data_format' => 'body',
         ]);
+
+        if (is_wp_error($response)) {
+            $this->last_error = 'Transport error: ' . $response->get_error_message();
+            $this->debug_log($this->last_error);
+            return false;
+        }
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $raw_body = (string) wp_remote_retrieve_body($response);
+        $decoded = json_decode($raw_body, true);
+
+        if ($status < 200 || $status >= 300) {
+            $this->last_error = 'HTTP ' . $status . ': ' . $this->extract_api_error($decoded, $raw_body);
+            $this->debug_log($this->last_error);
+            return false;
+        }
+
+        if (is_array($decoded) && isset($decoded['error'])) {
+            $this->last_error = $this->extract_api_error($decoded, $raw_body);
+            $this->debug_log($this->last_error);
+            return false;
+        }
+
+        if (is_array($decoded) && isset($decoded['events_received']) && (int) $decoded['events_received'] < 1) {
+            $this->last_error = 'Meta accepted the request but reported 0 events_received';
+            $this->debug_log($this->last_error);
+            return false;
+        }
 
         return true;
     }
@@ -99,7 +137,10 @@ final class MetaConversionsAPI {
         $hash_fields = ['em', 'ph', 'fn', 'ln', 'ct', 'st', 'zp', 'country'];
         foreach ($hash_fields as $field) {
             if (!empty($user_data[$field])) {
-                $value = strtolower(trim($user_data[$field]));
+                $value = $this->normalize_hash_value($field, (string) $user_data[$field]);
+                if ($value === '') {
+                    continue;
+                }
                 $hashed[$field] = hash('sha256', $value);
             }
         }
@@ -128,5 +169,54 @@ final class MetaConversionsAPI {
         }
 
         return $hashed;
+    }
+
+    /**
+     * Normalizes user_data values before SHA-256 hashing.
+     */
+    private function normalize_hash_value(string $field, string $value): string {
+        $value = strtolower(trim($value));
+
+        if ($field === 'em') {
+            return sanitize_email($value);
+        }
+
+        if ($field === 'ph') {
+            $phone = preg_replace('/[^0-9+]/', '', $value);
+            return is_string($phone) ? $phone : '';
+        }
+
+        if ($field === 'country') {
+            return substr(preg_replace('/[^a-z]/', '', $value) ?: '', 0, 2);
+        }
+
+        $value = remove_accents($value);
+        $value = preg_replace('/\s+/', '', $value);
+        $value = preg_replace('/[^a-z0-9]/', '', is_string($value) ? $value : '');
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * Extracts a safe error message from Meta API responses.
+     */
+    private function extract_api_error(mixed $decoded, string $raw_body): string {
+        if (is_array($decoded) && isset($decoded['error']) && is_array($decoded['error'])) {
+            $message = sanitize_text_field((string) ($decoded['error']['message'] ?? 'Meta API error'));
+            $type = sanitize_text_field((string) ($decoded['error']['type'] ?? ''));
+            $code = sanitize_text_field((string) ($decoded['error']['code'] ?? ''));
+            return trim($message . ($type !== '' ? ' [' . $type . ']' : '') . ($code !== '' ? ' code ' . $code : ''));
+        }
+
+        return substr(sanitize_text_field($raw_body !== '' ? $raw_body : 'Empty Meta API response'), 0, 300);
+    }
+
+    /**
+     * Logs Meta CAPI failures only when plugin debug is enabled.
+     */
+    private function debug_log(string $message): void {
+        if (defined('WP_DEBUG') && WP_DEBUG && $this->settings->get('debug_mode', false) && function_exists('error_log')) {
+            error_log('[FP Tracking] Meta CAPI error: ' . $message);
+        }
     }
 }

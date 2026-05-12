@@ -29,6 +29,7 @@ final class Settings {
         'google_ads_id'      => '',
         'meta_pixel_id'      => '',
         'meta_access_token'  => '',
+        'meta_test_event_code' => '',
         'clarity_project_id' => '',
         'debug_mode'         => false,
         'server_side_ga4'    => true,
@@ -296,6 +297,7 @@ final class Settings {
         $this->add_field('google_ads_id', __('Google Ads Conversion ID/Label', 'fp-tracking'), 'fp_tracking_server_side', 'text', 'AW-XXXXXXX/label');
         $this->add_field('meta_pixel_id', __('Meta Pixel ID', 'fp-tracking'), 'fp_tracking_meta', 'text', '');
         $this->add_field('meta_access_token', __('Meta Access Token (CAPI)', 'fp-tracking'), 'fp_tracking_meta', 'password', '');
+        $this->add_field('meta_test_event_code', __('Meta Test Event Code', 'fp-tracking'), 'fp_tracking_meta', 'text', '');
         $this->add_field('clarity_project_id', __('Microsoft Clarity Project ID', 'fp-tracking'), 'fp_tracking_other', 'text', '');
         $this->add_field('utm_cookie_days', __('UTM Cookie Duration (days)', 'fp-tracking'), 'fp_tracking_advanced', 'number', '90');
         $this->add_field('consent_default', __('Default Consent State', 'fp-tracking'), 'fp_tracking_advanced', 'select', 'denied', ['denied' => 'Denied (GDPR)', 'granted' => 'Granted']);
@@ -340,6 +342,7 @@ final class Settings {
                 'google_ads_id',
                 'meta_pixel_id',
                 'meta_access_token',
+                'meta_test_event_code',
                 'clarity_project_id',
                 'brevo_api_key',
                 'brevo_endpoint',
@@ -400,6 +403,7 @@ final class Settings {
         if ($clean['meta_access_token'] === '' && isset($previous['meta_access_token']) && (string) $previous['meta_access_token'] !== '') {
             $clean['meta_access_token'] = sanitize_text_field((string) $previous['meta_access_token']);
         }
+        $clean['meta_test_event_code'] = sanitize_text_field($input['meta_test_event_code'] ?? '');
         $clean['clarity_project_id'] = sanitize_text_field($input['clarity_project_id'] ?? '');
         $clean['utm_cookie_days']    = max(1, (int) ($input['utm_cookie_days'] ?? 90));
         $clean['consent_default']    = in_array($input['consent_default'] ?? '', ['denied', 'granted'], true) ? $input['consent_default'] : 'denied';
@@ -719,6 +723,7 @@ final class Settings {
         $warnings     = $validator->get_recent_warnings(10);
         $inspector    = new EventInspector();
         $inspectorEvents = $inspector->recent(10);
+        $matchQualityRows = $inspector->recent_match_quality(10);
         $ruleEngine   = new EventRuleEngine();
         $rulesData    = $ruleEngine->get_rules();
         $consentAudit = new ConsentAuditService();
@@ -1104,6 +1109,11 @@ final class Settings {
                                 <label><?php esc_html_e('Meta Access Token (CAPI)', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('meta_access_token', 'password', '', []); ?>
                                 <span class="fptracking-hint"><?php esc_html_e('Events Manager → Pixel → Settings → Conversions API → genera token', 'fp-tracking'); ?></span>
+                            </div>
+                            <div class="fptracking-field">
+                                <label for="fp_tracking_meta_test_event_code"><?php esc_html_e('Meta Test Event Code', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('meta_test_event_code', 'text', 'TEST12345', [], true, 'fp_tracking_meta_test_event_code'); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Opzionale: Events Manager → Test Events. Se valorizzato, viene inviato nelle chiamate CAPI per debug.', 'fp-tracking'); ?></span>
                             </div>
                         </div>
                     </div>
@@ -1575,6 +1585,31 @@ final class Settings {
                     <?php if ($inspectorEvents !== []): ?>
                         <p class="fptracking-section-title"><?php esc_html_e('Ultimi eventi campionati', 'fp-tracking'); ?></p>
                         <textarea class="large-text code" rows="8" readonly><?php echo esc_textarea((string) wp_json_encode($inspectorEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></textarea>
+                    <?php endif; ?>
+                    <?php if ($matchQualityRows !== []): ?>
+                        <p class="fptracking-section-title"><?php esc_html_e('Meta Event Match Quality — match key presenti', 'fp-tracking'); ?></p>
+                        <table class="fptracking-table">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Quando', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Evento', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Score', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Match key', 'fp-tracking'); ?></th>
+                                    <th><?php esc_html_e('Mancanti', 'fp-tracking'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($matchQualityRows as $row): ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) ($row['timestamp'] ?? '')); ?></td>
+                                    <td><code><?php echo esc_html((string) ($row['event'] ?? '')); ?></code></td>
+                                    <td><?php printf(esc_html__('%1$d/%2$d', 'fp-tracking'), (int) ($row['score'] ?? 0), (int) ($row['max_score'] ?? 0)); ?></td>
+                                    <td><?php echo esc_html(implode(', ', array_map('strval', (array) ($row['present'] ?? [])))); ?></td>
+                                    <td><?php echo esc_html(implode(', ', array_map('strval', (array) ($row['missing'] ?? [])))); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     <?php endif; ?>
                 </div>
             </div>
