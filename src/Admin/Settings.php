@@ -38,6 +38,7 @@ final class Settings {
         'consent_default'    => 'denied',
         'inspector_sample_rate' => 10,
         'brevo_enabled'      => false,
+        'brevo_consent_purpose' => 'marketing',
         'brevo_api_key'      => '',
         'brevo_endpoint'     => 'https://api.brevo.com/v3/events',
         'brevo_list_id_it'   => '',
@@ -304,6 +305,11 @@ final class Settings {
         $this->add_field('server_side_ga4', __('Enable GA4 Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
         $this->add_field('server_side_meta', __('Enable Meta CAPI Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
         $this->add_field('brevo_enabled', __('Enable Brevo Server-Side', 'fp-tracking'), 'fp_tracking_advanced', 'checkbox', '');
+        $this->add_field('brevo_consent_purpose', __('Brevo Consent Purpose', 'fp-tracking'), 'fp_tracking_advanced', 'select', 'marketing', [
+            'marketing' => __('Marketing', 'fp-tracking'),
+            'statistics' => __('Statistics', 'fp-tracking'),
+            'none' => __('No consent gate', 'fp-tracking'),
+        ]);
         $this->add_field('brevo_api_key', __('Brevo API Key', 'fp-tracking'), 'fp_tracking_advanced', 'password', '');
         $this->add_field('brevo_endpoint', __('Brevo Endpoint', 'fp-tracking'), 'fp_tracking_advanced', 'text', 'https://api.brevo.com/v3/events');
         $this->add_field('inspector_sample_rate', __('Inspector Sample Rate (%)', 'fp-tracking'), 'fp_tracking_advanced', 'number', '10');
@@ -410,6 +416,9 @@ final class Settings {
         $clean['server_side_ga4']    = !empty($input['server_side_ga4']);
         $clean['server_side_meta']   = !empty($input['server_side_meta']);
         $clean['brevo_enabled']      = !empty($input['brevo_enabled']);
+        $clean['brevo_consent_purpose'] = in_array($input['brevo_consent_purpose'] ?? '', ['marketing', 'statistics', 'none'], true)
+            ? (string) $input['brevo_consent_purpose']
+            : 'marketing';
         $clean['brevo_api_key']      = sanitize_text_field((string) ($input['brevo_api_key'] ?? ''));
         // Campi password: se il POST è vuoto (browser/plugin o "Salva" senza reinserire), mantieni la chiave già salvata.
         if ($clean['brevo_api_key'] === '' && isset($previous['brevo_api_key']) && (string) $previous['brevo_api_key'] !== '') {
@@ -1168,6 +1177,15 @@ final class Settings {
                             </label>
                         </div>
                         <div class="fptracking-fields-grid fptracking-fields-grid-top-gap">
+                            <div class="fptracking-field">
+                                <label><?php esc_html_e('Consenso richiesto per Brevo', 'fp-tracking'); ?></label>
+                                <?php $this->render_field('brevo_consent_purpose', 'select', '', [
+                                    'marketing' => __('Marketing', 'fp-tracking'),
+                                    'statistics' => __('Statistiche', 'fp-tracking'),
+                                    'none' => __('Nessun gate consenso', 'fp-tracking'),
+                                ]); ?>
+                                <span class="fptracking-hint"><?php esc_html_e('Scegli quale finalità consenso deve autorizzare gli eventi server-side Brevo. Default: Marketing.', 'fp-tracking'); ?></span>
+                            </div>
                             <div class="fptracking-field">
                                 <label for="fp_tracking_brevo_api_key"><?php esc_html_e('Brevo API Key', 'fp-tracking'); ?></label>
                                 <?php $this->render_field('brevo_api_key', 'password', '', [], false, 'fp_tracking_brevo_api_key'); ?>

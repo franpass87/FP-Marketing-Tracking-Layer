@@ -131,14 +131,15 @@ final class Plugin {
     }
 
     public function enqueue_server_side_event(string $event_name, array $params): void {
-        if (!$this->dataLayer->server_side_consent_granted($event_name)) {
+        $prepared = $this->dataLayer->prepare_server_side_payload($event_name, $params);
+        if ($prepared === null) {
             return;
         }
 
-        $enqueued = $this->eventQueue->enqueue($event_name, $params);
+        $enqueued = $this->eventQueue->enqueue($event_name, $prepared);
         if (!$enqueued) {
             // Fallback to direct dispatch if queue insert fails.
-            $this->serverSide->dispatch($event_name, $params);
+            $this->serverSide->dispatch($event_name, $prepared);
         }
     }
 

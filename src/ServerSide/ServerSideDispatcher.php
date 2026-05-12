@@ -10,7 +10,7 @@ use FPTracking\Brevo\BrevoDispatcher;
 use FPTracking\Brevo\BrevoMapper;
 
 /**
- * Orchestrates server-side event dispatch to GA4 and Meta.
+ * Orchestrates server-side event dispatch to GA4, Meta and Brevo.
  * Listens to the 'fp_tracking_server_side' action fired by DataLayerManager.
  */
 final class ServerSideDispatcher {
@@ -36,7 +36,7 @@ final class ServerSideDispatcher {
     private const META_EVENT_MAP = EventCatalog::META_EVENT_MAP;
 
     /**
-     * Dispatches server-side events to GA4 MP and Meta CAPI.
+     * Dispatches server-side events to GA4 MP, Meta CAPI and Brevo.
      * Called by add_action('fp_tracking_server_side', ...).
      *
      * @param string $event_name  FP internal event name
@@ -62,7 +62,7 @@ final class ServerSideDispatcher {
 
         // ── GA4 Measurement Protocol ─────────────────────────────────────────
         $ga4_params = $this->build_ga4_params($event_name, $params);
-        if ($this->ga4->is_enabled()) {
+        if ($this->ga4->is_enabled() && $this->channel_consent_granted('ga4', $event_name, $params)) {
             $attempted++;
             if (!$this->ga4->send($event_name, $ga4_params, $client_id, $event_id, $user_data)) {
                 $errors[] = 'GA4 send failed';
@@ -71,7 +71,7 @@ final class ServerSideDispatcher {
 
         // ── Meta Conversions API ─────────────────────────────────────────────
         $meta_event = self::META_EVENT_MAP[$event_name] ?? null;
-        if ($meta_event !== null && $this->meta->is_enabled()) {
+        if ($meta_event !== null && $this->meta->is_enabled() && $this->channel_consent_granted('meta', $event_name, $params)) {
             $attempted++;
             $meta_custom    = $this->build_meta_custom($event_name, $params);
             $source_url     = (string) ($params['page_url'] ?? $params['event_source_url'] ?? '');
@@ -82,7 +82,7 @@ final class ServerSideDispatcher {
         }
 
         // ── Brevo Events API ─────────────────────────────────────────────────
-        if ($this->brevo->is_enabled()) {
+        if ($this->brevo->is_enabled() && $this->channel_consent_granted('brevo', $event_name, $params)) {
             $attempted++;
             if (!$this->brevo->dispatch($event_name, $params)) {
                 $errors[] = 'Brevo send failed';
@@ -102,7 +102,7 @@ final class ServerSideDispatcher {
      */
     private function build_ga4_params(string $event_name, array $params): array {
         // Fields that are handled separately or are internal
-        $exclude = ['user_data', 'event_id'];
+        $exclude = ['user_data', 'event_id', 'fp_server_side_consent'];
 
         $ga4 = [];
         foreach ($params as $key => $value) {
@@ -113,6 +113,38 @@ final class ServerSideDispatcher {
         }
 
         return $ga4;
+    }
+
+    /**
+     * Checks consent for a specific server-side destination.
+     *
+     * @param array<string, mixed> $params Event payload with consent snapshot.
+     * @return bool True when the destination has the required consent category.
+     */
+    private function channel_consent_granted(string $channel, string $event_name, array $params): bool {
+        $required = (bool) apply_filters('fp_tracking_server_side_consent_required', true, $event_name, $channel);
+        if (!$required) {
+            return true;
+        }
+
+        $purpose = match ($channel) {
+            'ga4' => 'statistics',
+            'meta' => 'marketing',
+            'brevo' => (string) $this->settings->get('brevo_consent_purpose', 'marketing'),
+            default => 'marketing',
+        };
+        $purpose = (string) apply_filters('fp_tracking_server_side_consent_purpose', $purpose, $channel, $event_name, $params);
+
+        if ($purpose === 'none') {
+            return (bool) apply_filters('fp_tracking_server_side_has_consent', true, $event_name, $channel, $params);
+        }
+
+        $state = isset($params['fp_server_side_consent']) && is_array($params['fp_server_side_consent'])
+            ? $params['fp_server_side_consent']
+            : [];
+        $allowed = !empty($state[$purpose]);
+
+        return (bool) apply_filters('fp_tracking_server_side_has_consent', $allowed, $event_name, $channel, $params);
     }
 
     /**

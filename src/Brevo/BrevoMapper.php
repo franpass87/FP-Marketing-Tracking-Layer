@@ -51,6 +51,7 @@ final class BrevoMapper {
 
         $eventProperties = $params;
         unset($eventProperties['user_data']);
+        unset($eventProperties['fp_server_side_consent']);
         $eventProperties['event_id'] = (string) ($params['event_id'] ?? uniqid('fp_', true));
         $eventProperties['event_name_source'] = $event_name;
         if (!isset($eventProperties['fp_source']) || !is_string($eventProperties['fp_source']) || $eventProperties['fp_source'] === '') {

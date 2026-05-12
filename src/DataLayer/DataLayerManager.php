@@ -70,11 +70,12 @@ final class DataLayerManager {
             $params['event_id'] = uniqid('fp_', true);
         }
 
-        $server_side_event = !$skip_server_dispatch
-            && $this->is_server_side_event($event_name)
-            && $this->has_server_side_consent($event_name);
+        $server_side_event = !$skip_server_dispatch && $this->is_server_side_event($event_name);
         if ($server_side_event) {
-            $params = $this->with_server_side_user_data($params);
+            $params = $this->prepare_server_side_payload($event_name, $params);
+            if ($params === null) {
+                $server_side_event = false;
+            }
         }
 
         $event = $this->schema->build($event_name, $params);
@@ -108,6 +109,7 @@ final class DataLayerManager {
         // Strip user_data (PII) before pushing to the browser dataLayer
         $browser_queue = array_map(static function (array $event): array {
             unset($event['user_data']);
+            unset($event['fp_server_side_consent']);
             return $event;
         }, $this->queue);
 
@@ -146,50 +148,139 @@ final class DataLayerManager {
 
     /**
      * Public consent gate for direct server-side enqueue paths.
+     *
+     * @return bool True when at least one enabled server-side channel can run.
      */
     public function server_side_consent_granted(string $event_name): bool {
-        return $this->has_server_side_consent($event_name);
+        return $this->has_any_server_side_channel_consent($event_name, [
+            'fp_server_side_consent' => $this->current_consent_state(),
+        ]);
     }
 
     /**
-     * Checks whether server-side tracking is allowed by the current consent state.
+     * Prepares a payload for queueing by preserving request-only match keys and consent state.
+     *
+     * @param array<string, mixed> $params Event payload.
+     * @return array<string, mixed>|null Payload or null when no configured channel has consent.
      */
-    private function has_server_side_consent(string $event_name): bool {
+    public function prepare_server_side_payload(string $event_name, array $params): ?array {
+        $params = $this->with_server_side_user_data($params);
+        $params['fp_server_side_consent'] = $this->current_consent_state();
+
+        if (!$this->has_any_server_side_channel_consent($event_name, $params)) {
+            return null;
+        }
+
+        return $params;
+    }
+
+    /**
+     * Checks whether at least one configured server-side destination has consent.
+     *
+     * @param array<string, mixed> $params Event payload.
+     * @return bool True when at least one enabled destination can receive the event.
+     */
+    private function has_any_server_side_channel_consent(string $event_name, array $params): bool {
         $required = (bool) apply_filters('fp_tracking_server_side_consent_required', true, $event_name);
         if (!$required) {
             return true;
         }
 
-        $allowed = $this->current_marketing_consent_granted();
+        $allowed = false;
+        if ($this->settings->get('server_side_ga4', true) && $this->channel_consent_granted('ga4', $event_name, $params)) {
+            $allowed = true;
+        }
 
-        return (bool) apply_filters('fp_tracking_server_side_has_consent', $allowed, $event_name);
+        if (!$allowed
+            && $this->settings->get('server_side_meta', true)
+            && isset(EventCatalog::META_EVENT_MAP[$event_name])
+            && $this->channel_consent_granted('meta', $event_name, $params)
+        ) {
+            $allowed = true;
+        }
+
+        if (!$allowed
+            && $this->settings->get('brevo_enabled', false)
+            && $this->channel_consent_granted('brevo', $event_name, $params)
+        ) {
+            $allowed = true;
+        }
+
+        return (bool) apply_filters('fp_tracking_server_side_has_consent', $allowed, $event_name, 'any', $params);
     }
 
     /**
-     * Resolves marketing consent from FP Privacy when available, otherwise from this plugin default.
+     * Checks whether a destination has the consent category it needs.
+     *
+     * @param array<string, mixed> $params Event payload.
+     * @return bool True when the requested destination has consent.
      */
-    private function current_marketing_consent_granted(): bool {
+    public function channel_consent_granted(string $channel, string $event_name, array $params): bool {
+        $required = (bool) apply_filters('fp_tracking_server_side_consent_required', true, $event_name, $channel);
+        if (!$required) {
+            return true;
+        }
+
+        $purpose = match ($channel) {
+            'ga4' => 'statistics',
+            'meta' => 'marketing',
+            'brevo' => (string) $this->settings->get('brevo_consent_purpose', 'marketing'),
+            default => 'marketing',
+        };
+        $purpose = (string) apply_filters('fp_tracking_server_side_consent_purpose', $purpose, $channel, $event_name, $params);
+
+        if ($purpose === 'none') {
+            return (bool) apply_filters('fp_tracking_server_side_has_consent', true, $event_name, $channel, $params);
+        }
+
+        $state = isset($params['fp_server_side_consent']) && is_array($params['fp_server_side_consent'])
+            ? $params['fp_server_side_consent']
+            : $this->current_consent_state();
+
+        $allowed = !empty($state[$purpose]);
+
+        return (bool) apply_filters('fp_tracking_server_side_has_consent', $allowed, $event_name, $channel, $params);
+    }
+
+    /**
+     * Resolves current consent categories from FP Privacy when available.
+     *
+     * @return array{statistics:bool,marketing:bool,preferences:bool,necessary:bool}
+     */
+    private function current_consent_state(): array {
+        $fallback = (string) $this->settings->get('consent_default', 'denied') === 'granted';
+        $state = [
+            'statistics' => $fallback,
+            'marketing' => $fallback,
+            'preferences' => false,
+            'necessary' => true,
+        ];
+
         if (class_exists('\FP\Privacy\Frontend\ConsentCookieManager') && class_exists('\FP\Privacy\Consent\LogModel')) {
             try {
                 $cookie = \FP\Privacy\Frontend\ConsentCookieManager::get_cookie_payload();
                 $consent_id = is_array($cookie) ? (string) ($cookie['id'] ?? '') : '';
                 if ($consent_id === '') {
-                    return false;
+                    return ['statistics' => false, 'marketing' => false, 'preferences' => false, 'necessary' => true];
                 }
 
                 $record = (new \FP\Privacy\Consent\LogModel())->find_latest_by_consent_id($consent_id);
                 if (!is_array($record)) {
-                    return false;
+                    return ['statistics' => false, 'marketing' => false, 'preferences' => false, 'necessary' => true];
                 }
 
                 $states = isset($record['states']) && is_array($record['states']) ? $record['states'] : [];
-                return !empty($states['marketing']);
+                foreach (['statistics', 'marketing', 'preferences', 'necessary'] as $purpose) {
+                    if (array_key_exists($purpose, $states)) {
+                        $state[$purpose] = !empty($states[$purpose]);
+                    }
+                }
             } catch (\Throwable) {
-                return false;
+                return ['statistics' => false, 'marketing' => false, 'preferences' => false, 'necessary' => true];
             }
         }
 
-        return (string) $this->settings->get('consent_default', 'denied') === 'granted';
+        return $state;
     }
 
     /**

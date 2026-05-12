@@ -2,6 +2,16 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.7.0] - 2026-05-12
+
+### Added
+- **Consent granularity server-side**: GA4 Measurement Protocol richiede consenso `statistics`, Meta CAPI richiede `marketing`, mentre Brevo ha finalità configurabile (`marketing`, `statistics` o nessun gate) nelle impostazioni admin.
+- **Consent snapshot in queue**: gli eventi server-side salvano lo stato consenso nel payload prima del cron worker, così ogni destinazione può decidere correttamente anche fuori dalla richiesta originale.
+
+### Changed
+- **Dispatch server-side per canale**: la coda non viene più bloccata da un unico gate marketing; il dispatcher invia solo ai canali con consenso valido e salta gli altri senza errore.
+- **Brevo payload**: i metadati interni del consenso non vengono inoltrati nelle proprietà evento Brevo.
+
 ## [1.6.0] - 2026-05-12
 
 ### Added
