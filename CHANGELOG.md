@@ -2,6 +2,12 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.5.3] - 2026-05-12
+
+### Fixed
+- **Meta Pixel / CAPI Event Match Quality**: gli eventi server-side in coda salvano ora `client_ip_address`, `client_user_agent`, `_fbp`, `_fbc` e, quando disponibile, un `external_id` hashato prima del cron worker. Evita payload Meta poveri quando l'invio avviene fuori dalla richiesta originale del visitatore.
+- **Lead forms**: Contact Form 7, WPForms e Ninja Forms estraggono email, telefono e nome dai campi inviati per alimentare `user_data` nei `generate_lead`, migliorando il matching Meta senza esporre PII nel dataLayer browser.
+
 ## [1.5.2] - 2026-05-07
 
 ### Added

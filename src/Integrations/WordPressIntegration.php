@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace FPTracking\Integrations;
 
@@ -91,6 +92,8 @@ final class WordPressIntegration {
     // -----------------------------------------------------------------------
 
     public function track_cf7_submit(\WPCF7_ContactForm $contact_form): void {
+        $user_data = $this->extract_cf7_user_data();
+
         do_action('fp_tracking_event', 'contact_form_submit', [
             'form_id'    => $contact_form->id(),
             'form_title' => $contact_form->title(),
@@ -106,6 +109,7 @@ final class WordPressIntegration {
             'value'      => 1.0,
             'currency'   => 'EUR',
             'event_id'   => 'cf7_lead_' . $contact_form->id() . '_' . time(),
+            'user_data'  => $user_data,
         ]);
     }
 
@@ -137,6 +141,8 @@ final class WordPressIntegration {
     // -----------------------------------------------------------------------
 
     public function track_wpforms_submit(array $fields, array $entry, array $form_data, int $entry_id): void {
+        $user_data = $this->extract_wpforms_user_data($fields);
+
         do_action('fp_tracking_event', 'contact_form_submit', [
             'form_id'    => $form_data['id'],
             'form_title' => $form_data['settings']['form_title'] ?? '',
@@ -151,6 +157,7 @@ final class WordPressIntegration {
             'value'      => 1.0,
             'currency'   => 'EUR',
             'event_id'   => 'wpf_lead_' . $form_data['id'] . '_' . $entry_id,
+            'user_data'  => $user_data,
         ]);
     }
 
@@ -161,6 +168,7 @@ final class WordPressIntegration {
     public function track_ninjaforms_submit(array $form_data): void {
         $form_id    = $form_data['form_id'] ?? 0;
         $form_title = $form_data['settings']['title'] ?? 'Ninja Form';
+        $user_data  = $this->extract_ninjaforms_user_data($form_data);
 
         do_action('fp_tracking_event', 'contact_form_submit', [
             'form_id'    => $form_id,
@@ -176,6 +184,7 @@ final class WordPressIntegration {
             'value'      => 1.0,
             'currency'   => 'EUR',
             'event_id'   => 'nf_lead_' . $form_id . '_' . time(),
+            'user_data'  => $user_data,
         ]);
     }
 
@@ -475,20 +484,264 @@ final class WordPressIntegration {
     private function extract_gf_user_data(array $entry, array $form): array {
         $user_data = [];
         foreach ($form['fields'] ?? [] as $field) {
-            $type  = $field['type'] ?? '';
-            $value = $entry[$field['id']] ?? '';
+            $type = is_array($field) ? (string) ($field['type'] ?? '') : (string) ($field->type ?? '');
+            $id   = is_array($field) ? (string) ($field['id'] ?? '') : (string) ($field->id ?? '');
+            if ($id === '') {
+                continue;
+            }
+
+            $value = $entry[$id] ?? '';
             if (empty($value)) {
+                if ($type === 'name') {
+                    $this->maybe_set_name(
+                        $user_data,
+                        (string) ($entry[$id . '.3'] ?? ''),
+                        (string) ($entry[$id . '.6'] ?? ''),
+                        ''
+                    );
+                }
                 continue;
             }
             if ($type === 'email') {
-                $user_data['em'] = sanitize_email($value);
+                $this->maybe_set_email($user_data, $value);
             } elseif ($type === 'phone') {
-                $user_data['ph'] = sanitize_text_field($value);
+                $this->maybe_set_phone($user_data, $value);
             } elseif ($type === 'name') {
-                $user_data['fn'] = sanitize_text_field($field['inputs'][0]['value'] ?? $value);
-                $user_data['ln'] = sanitize_text_field($field['inputs'][1]['value'] ?? '');
+                $this->maybe_set_name($user_data, '', '', $value);
             }
         }
-        return array_filter($user_data);
+
+        return $this->filter_user_data($user_data);
+    }
+
+    /**
+     * Extracts Meta match data from Contact Form 7 posted fields.
+     *
+     * @return array<string, string>
+     */
+    private function extract_cf7_user_data(): array {
+        if (!class_exists('\WPCF7_Submission')) {
+            return [];
+        }
+
+        $submission = \WPCF7_Submission::get_instance();
+        if (!$submission instanceof \WPCF7_Submission) {
+            return [];
+        }
+
+        $posted_data = $submission->get_posted_data();
+        if (!is_array($posted_data)) {
+            return [];
+        }
+
+        return $this->extract_user_data_from_named_values($posted_data);
+    }
+
+    /**
+     * Extracts Meta match data from WPForms processed fields.
+     *
+     * @param array<int|string, array<string, mixed>> $fields
+     * @return array<string, string>
+     */
+    private function extract_wpforms_user_data(array $fields): array {
+        $user_data = [];
+
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $type  = strtolower((string) ($field['type'] ?? ''));
+            $label = (string) ($field['name'] ?? $field['label'] ?? $field['key'] ?? '');
+            $value = $field['value'] ?? '';
+
+            if ($type === 'email') {
+                $this->maybe_set_email($user_data, $value);
+                continue;
+            }
+
+            if ($type === 'phone') {
+                $this->maybe_set_phone($user_data, $value);
+                continue;
+            }
+
+            if ($type === 'name') {
+                $this->maybe_set_name($user_data, (string) ($field['first'] ?? ''), (string) ($field['last'] ?? ''), $value);
+                continue;
+            }
+
+            $user_data = $this->extract_user_data_from_named_value($user_data, $label, $value);
+        }
+
+        return $this->filter_user_data($user_data);
+    }
+
+    /**
+     * Extracts Meta match data from Ninja Forms submitted fields.
+     *
+     * @param array<string, mixed> $form_data
+     * @return array<string, string>
+     */
+    private function extract_ninjaforms_user_data(array $form_data): array {
+        $fields = isset($form_data['fields']) && is_array($form_data['fields'])
+            ? $form_data['fields']
+            : [];
+
+        $user_data = [];
+        foreach ($fields as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $type  = strtolower((string) ($field['type'] ?? ''));
+            $label = (string) ($field['key'] ?? $field['label'] ?? '');
+            $value = $field['value'] ?? '';
+
+            if ($type === 'email') {
+                $this->maybe_set_email($user_data, $value);
+                continue;
+            }
+
+            if ($type === 'phone' || $type === 'phone-number') {
+                $this->maybe_set_phone($user_data, $value);
+                continue;
+            }
+
+            $user_data = $this->extract_user_data_from_named_value($user_data, $label, $value);
+        }
+
+        return $this->filter_user_data($user_data);
+    }
+
+    /**
+     * Extracts email, phone and name hints from generic keyed form values.
+     *
+     * @param array<string, mixed> $values
+     * @return array<string, string>
+     */
+    private function extract_user_data_from_named_values(array $values): array {
+        $user_data = [];
+
+        foreach ($values as $key => $value) {
+            $user_data = $this->extract_user_data_from_named_value($user_data, (string) $key, $value);
+        }
+
+        return $this->filter_user_data($user_data);
+    }
+
+    /**
+     * Extracts one generic form value into a Meta user_data field when possible.
+     *
+     * @param array<string, string> $user_data
+     * @param mixed                 $value
+     * @return array<string, string>
+     */
+    private function extract_user_data_from_named_value(array $user_data, string $key, mixed $value): array {
+        if (is_array($value)) {
+            $value = implode(' ', array_map('strval', $value));
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            return $user_data;
+        }
+
+        $hint = strtolower($key);
+
+        if (empty($user_data['em']) && is_email($text)) {
+            $user_data['em'] = sanitize_email($text);
+        }
+
+        if (empty($user_data['ph']) && preg_match('/phone|tel|telefono|mobile|whatsapp|cell/i', $hint)) {
+            $this->maybe_set_phone($user_data, $text);
+        }
+
+        if (preg_match('/first|nome|your-name|full.?name|name/i', $hint)
+            && !preg_match('/last|cognome|surname/i', $hint)
+        ) {
+            $this->maybe_set_name($user_data, '', '', $text);
+        }
+
+        if (empty($user_data['ln']) && preg_match('/last|cognome|surname/i', $hint)) {
+            $user_data['ln'] = sanitize_text_field($text);
+        }
+
+        return $user_data;
+    }
+
+    /**
+     * Sets email if the submitted value is valid.
+     *
+     * @param array<string, string> $user_data
+     * @param mixed                 $value
+     */
+    private function maybe_set_email(array &$user_data, mixed $value): void {
+        if (is_array($value)) {
+            $value = implode(' ', array_map('strval', $value));
+        }
+
+        $email = sanitize_email((string) $value);
+        if ($email !== '' && is_email($email) && empty($user_data['em'])) {
+            $user_data['em'] = $email;
+        }
+    }
+
+    /**
+     * Sets phone if a phone-like submitted value is available.
+     *
+     * @param array<string, string> $user_data
+     * @param mixed                 $value
+     */
+    private function maybe_set_phone(array &$user_data, mixed $value): void {
+        if (is_array($value)) {
+            $value = implode(' ', array_map('strval', $value));
+        }
+
+        $phone = preg_replace('/[^0-9+]/', '', (string) $value);
+        if (is_string($phone) && $phone !== '' && empty($user_data['ph'])) {
+            $user_data['ph'] = $phone;
+        }
+    }
+
+    /**
+     * Sets first/last name from structured or full-name values.
+     *
+     * @param array<string, string> $user_data
+     * @param mixed                 $fallback
+     */
+    private function maybe_set_name(array &$user_data, string $first, string $last, mixed $fallback = ''): void {
+        $first = trim($first);
+        $last  = trim($last);
+        $fallback_text = is_array($fallback)
+            ? implode(' ', array_map('strval', $fallback))
+            : (string) $fallback;
+
+        if (($first === '' || $last === '') && trim($fallback_text) !== '') {
+            $parts = preg_split('/\s+/', trim($fallback_text));
+            if (is_array($parts) && $parts !== []) {
+                $first = $first !== '' ? $first : (string) array_shift($parts);
+                $last  = $last !== '' ? $last : implode(' ', $parts);
+            }
+        }
+
+        if ($first !== '' && empty($user_data['fn'])) {
+            $user_data['fn'] = sanitize_text_field($first);
+        }
+        if ($last !== '' && empty($user_data['ln'])) {
+            $user_data['ln'] = sanitize_text_field($last);
+        }
+    }
+
+    /**
+     * Removes empty values while preserving valid "0" strings.
+     *
+     * @param array<string, string> $user_data
+     * @return array<string, string>
+     */
+    private function filter_user_data(array $user_data): array {
+        return array_filter(
+            $user_data,
+            static fn($value): bool => $value !== ''
+        );
     }
 }

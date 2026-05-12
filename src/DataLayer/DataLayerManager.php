@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace FPTracking\DataLayer;
 
@@ -69,6 +70,11 @@ final class DataLayerManager {
             $params['event_id'] = uniqid('fp_', true);
         }
 
+        $server_side_event = !$skip_server_dispatch && $this->is_server_side_event($event_name);
+        if ($server_side_event) {
+            $params = $this->with_server_side_user_data($params);
+        }
+
         $event = $this->schema->build($event_name, $params);
         $warnings = $this->validator->validate($event_name, $event);
         $sampleRate = (int) $this->settings->get('inspector_sample_rate', 10);
@@ -76,7 +82,7 @@ final class DataLayerManager {
         $this->queue[] = $event;
 
         // Trigger server-side dispatch (GA4 MP + Meta CAPI) for conversion events
-        if (!$skip_server_dispatch && $this->is_server_side_event($event_name)) {
+        if ($server_side_event) {
             do_action('fp_tracking_server_side', $event_name, $params);
         }
     }
@@ -159,5 +165,131 @@ final class DataLayerManager {
         }
 
         return apply_filters('fp_tracking_params_with_attribution', $params, $attribution);
+    }
+
+    /**
+     * Persists match keys needed by queued Meta CAPI dispatches.
+     *
+     * Queue workers run outside the original visitor request, so request-only
+     * data such as IP, user agent and Meta cookies must be captured before the
+     * event is stored.
+     *
+     * @param array<string, mixed> $params Event payload.
+     * @return array<string, mixed> Event payload with enriched user_data.
+     */
+    private function with_server_side_user_data(array $params): array {
+        $user_data = isset($params['user_data']) && is_array($params['user_data'])
+            ? $params['user_data']
+            : [];
+
+        $user_data = $this->merge_missing_user_data($user_data, $this->request_match_user_data());
+
+        $user_data = array_filter(
+            $user_data,
+            static fn($value): bool => $value !== null && $value !== ''
+        );
+
+        if ($user_data !== []) {
+            $params['user_data'] = $user_data;
+        }
+
+        return $params;
+    }
+
+    /**
+     * Builds user_data values available during the original HTTP request.
+     *
+     * @return array<string, string>
+     */
+    private function request_match_user_data(): array {
+        $data = [];
+
+        $ip = $this->current_request_ip();
+        if ($ip !== '') {
+            $data['client_ip_address'] = $ip;
+        }
+
+        if (!empty($_SERVER['HTTP_USER_AGENT'])) {
+            $data['client_user_agent'] = sanitize_text_field(wp_unslash((string) $_SERVER['HTTP_USER_AGENT']));
+        }
+
+        $attribution = UTMCookieHandler::get_current_attribution();
+        $fbp = $this->cookie_value('_fbp') ?: (string) ($attribution['_fbp'] ?? '');
+        if ($fbp !== '') {
+            $data['fbp'] = sanitize_text_field($fbp);
+        }
+
+        $fbc = $this->cookie_value('_fbc') ?: (string) ($attribution['_fbc'] ?? '');
+        if ($fbc === '') {
+            $fbclid = isset($_GET['fbclid'])
+                ? sanitize_text_field(wp_unslash((string) $_GET['fbclid']))
+                : (string) ($attribution['fbclid'] ?? '');
+            if ($fbclid !== '') {
+                $captured_at = isset($attribution['captured_at']) ? (int) $attribution['captured_at'] : time();
+                $fbc = 'fb.1.' . ($captured_at * 1000) . '.' . sanitize_text_field($fbclid);
+            }
+        }
+        if ($fbc !== '') {
+            $data['fbc'] = sanitize_text_field($fbc);
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            $user = get_userdata($user_id);
+            if ($user instanceof \WP_User) {
+                $data['external_id'] = hash('sha256', (string) $user_id);
+                if ($user->user_email !== '') {
+                    $data['em'] = sanitize_email($user->user_email);
+                }
+                if ($user->first_name !== '') {
+                    $data['fn'] = sanitize_text_field($user->first_name);
+                }
+                if ($user->last_name !== '') {
+                    $data['ln'] = sanitize_text_field($user->last_name);
+                }
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Merges fallback user_data without overriding caller-provided PII.
+     *
+     * @param array<string, mixed>  $user_data Existing payload user data.
+     * @param array<string, string> $fallback  Request-derived fallback fields.
+     * @return array<string, mixed>
+     */
+    private function merge_missing_user_data(array $user_data, array $fallback): array {
+        foreach ($fallback as $key => $value) {
+            if ($value !== '' && empty($user_data[$key])) {
+                $user_data[$key] = $value;
+            }
+        }
+
+        return $user_data;
+    }
+
+    /**
+     * Returns the current visitor IP address.
+     */
+    private function current_request_ip(): string {
+        $ip = '';
+        if (!empty($_SERVER['REMOTE_ADDR'])) {
+            $ip = sanitize_text_field(wp_unslash((string) $_SERVER['REMOTE_ADDR']));
+        }
+
+        return (string) apply_filters('fp_tracking_client_ip_address', $ip);
+    }
+
+    /**
+     * Reads and sanitizes a cookie value.
+     */
+    private function cookie_value(string $name): string {
+        if (empty($_COOKIE[$name])) {
+            return '';
+        }
+
+        return sanitize_text_field(wp_unslash((string) $_COOKIE[$name]));
     }
 }
