@@ -71,9 +71,10 @@ final class DataLayerManager {
         }
 
         $server_side_event = !$skip_server_dispatch && $this->is_server_side_event($event_name);
+        $server_side_payload = null;
         if ($server_side_event) {
-            $params = $this->prepare_server_side_payload($event_name, $params);
-            if ($params === null) {
+            $server_side_payload = $this->prepare_server_side_payload($event_name, $params);
+            if ($server_side_payload === null) {
                 $server_side_event = false;
             }
         }
@@ -85,8 +86,8 @@ final class DataLayerManager {
         $this->queue[] = $event;
 
         // Trigger server-side dispatch (GA4 MP + Meta CAPI) for conversion events
-        if ($server_side_event) {
-            do_action('fp_tracking_server_side', $event_name, $params);
+        if ($server_side_event && $server_side_payload !== null) {
+            do_action('fp_tracking_server_side', $event_name, $server_side_payload);
         }
     }
 

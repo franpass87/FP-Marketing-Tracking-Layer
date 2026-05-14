@@ -2,6 +2,11 @@
 
 All notable changes to FP Marketing Tracking Layer will be documented in this file.
 
+## [1.9.1] - 2026-05-14
+
+### Fixed
+- **DataLayer queue**: quando il payload server-side non è disponibile (consenso assente o canali disabilitati), l'evento browser non perde più i parametri e non va più in fatal su `EventSchema::build()`.
+
 ## [1.9.0] - 2026-05-12
 
 ### Added
